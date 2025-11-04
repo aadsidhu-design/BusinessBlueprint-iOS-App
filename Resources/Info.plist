@@ -28,7 +28,7 @@
 	
 	<!-- API Keys (SECURE) -->
 	<key>GOOGLE_AI_API_KEY</key>
-	<string>$(GOOGLE_AI_API_KEY)</string>
+	<string>AIzaSyDwtGElGSno15x83lQvgSvsaTIX98ca4A4</string>
 	
 	<!-- Firebase Config -->
 	<key>FIREBASE_PROJECT_ID</key>

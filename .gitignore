@@ -29,7 +29,7 @@ Podfile.lock
 GoogleService-Info.plist
 Config/Secrets.swift
 Config/SecureConfig.swift
-# Resources/Info.plist - Keep this file but use $(VAR) placeholders for secrets
+Resources/Info.plist
 
 # Sensitive config files
 **/Secrets/*

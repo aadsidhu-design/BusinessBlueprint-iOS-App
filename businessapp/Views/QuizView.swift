@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct QuizView: View {
+    @EnvironmentObject private var authVM: AuthViewModel
+    @EnvironmentObject private var businessPlanStore: BusinessPlanStore
     @StateObject private var viewModel = QuizViewModel()
     @State private var firstName = ""
     @State private var lastName = ""
@@ -59,9 +61,7 @@ struct QuizView: View {
                     }
                     
                     if viewModel.currentStep == .results {
-                        Button(action: { 
-                            onComplete?()
-                        }) {
+                        Button(action: completeQuiz) {
                             Text("Continue to Dashboard")
                                 .font(.system(size: 16, weight: .semibold))
                                 .frame(maxWidth: .infinity)
@@ -79,6 +79,8 @@ struct QuizView: View {
                                 .foregroundColor(.white)
                                 .cornerRadius(12)
                         }
+                        .disabled(viewModel.isLoading)
+                        .opacity(viewModel.isLoading ? 0.6 : 1)
                     } else if viewModel.currentStep != .loading {
                         Button(action: { viewModel.nextStep() }) {
                             Text("Next")
@@ -98,11 +100,60 @@ struct QuizView: View {
                                 .foregroundColor(.white)
                                 .cornerRadius(12)
                         }
+                        .disabled(!canAdvance)
+                        .opacity(canAdvance ? 1 : 0.5)
                     }
                 }
                 .padding(20)
             }
         }
+    }
+    
+    private var canAdvance: Bool {
+        switch viewModel.currentStep {
+        case .skills:
+            return !viewModel.selectedSkills.isEmpty
+        case .personality:
+            return !viewModel.selectedPersonality.isEmpty
+        case .interests:
+            return !viewModel.selectedInterests.isEmpty
+        case .personalInfo:
+            return !firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .welcome, .loading, .results:
+            return true
+        }
+    }
+    
+    private func completeQuiz() {
+        guard !viewModel.isLoading else { return }
+        let sanitizedFirstName = firstName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sanitizedLastName = lastName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let userId = authVM.userId ?? UUID().uuidString
+        let email = authVM.email ?? "founder@businessblueprint.app"
+        let profile = UserProfile(
+            id: userId,
+            email: email,
+            firstName: sanitizedFirstName.isEmpty ? "Founder" : sanitizedFirstName,
+            lastName: sanitizedLastName,
+            skills: Array(viewModel.selectedSkills).sorted(),
+            personality: Array(viewModel.selectedPersonality).sorted(),
+            interests: Array(viewModel.selectedInterests).sorted(),
+            createdAt: Date(),
+            subscriptionTier: "free"
+        )
+        
+        var generatedIdeas = viewModel.businessIdeas
+        if generatedIdeas.isEmpty {
+            generatedIdeas = QuizViewModel.fallbackIdeas(
+                for: userId,
+                skills: profile.skills,
+                personality: profile.personality,
+                interests: profile.interests
+            )
+        }
+        let personalizedIdeas = generatedIdeas.map { $0.withUserId(userId) }
+        businessPlanStore.applyQuizResults(profile: profile, ideas: personalizedIdeas)
+        onComplete?()
     }
     
     func stepProgress() -> Int {
@@ -283,12 +334,16 @@ struct PersonalInfoStepView: View {
             
             VStack(spacing: 16) {
                 TextField("First Name", text: $firstName)
+                    .textInputAutocapitalization(.words)
+                    .disableAutocorrection(true)
                     .padding(14)
                     .background(Color.white.opacity(0.1))
                     .cornerRadius(12)
                     .foregroundColor(.white)
                 
                 TextField("Last Name", text: $lastName)
+                    .textInputAutocapitalization(.words)
+                    .disableAutocorrection(true)
                     .padding(14)
                     .background(Color.white.opacity(0.1))
                     .cornerRadius(12)
@@ -403,6 +458,23 @@ struct ResultsStepView: View {
             .padding(16)
             .background(Color.white.opacity(0.05))
             .cornerRadius(12)
+            
+            if !viewModel.businessIdeas.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Top Recommendations")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    VStack(spacing: 12) {
+                        ForEach(viewModel.businessIdeas.prefix(3)) { idea in
+                            IdeaCardCompact(idea: idea)
+                        }
+                    }
+                }
+                .padding(16)
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(12)
+            }
         }
     }
 }

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- App Info -->
+	<key>CFBundleName</key>
+	<string>BusinessIdea</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.aadsidhu.businessidea</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	
+	<!-- iOS Requirements -->
+	<key>MinimumOSVersion</key>
+	<string>14.0</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	
+	<!-- Supported Orientations -->
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	
+	<!-- API Keys (SECURE) -->
+	<key>GOOGLE_AI_API_KEY</key>
+	<string>$(GOOGLE_AI_API_KEY)</string>
+	
+	<!-- Firebase Config -->
+	<key>FIREBASE_PROJECT_ID</key>
+	<string>studio-5837146656-10acf</string>
+	<key>FIREBASE_PROJECT_NUMBER</key>
+	<string>1095936176351</string>
+	<key>FIREBASE_WEB_API_KEY</key>
+	<string>$(FIREBASE_WEB_API_KEY)</string>
+	
+	<!-- App Features -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need access to your photos to set a profile picture.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>We need access to your camera to capture a profile photo.</string>
+	
+	<!-- Network Security -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>generativelanguage.googleapis.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+			</dict>
+			<key>firebaseapp.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+			</dict>
+		</dict>
+	</dict>
+	
+	<!-- UI Appearance -->
+	<key>UIAppFonts</key>
+	<array/>
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleDefault</string>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+</dict>
+</plist>

@@ -199,4 +199,60 @@ class DashboardViewModel: ObservableObject {
     var completedGoalsCount: Int {
         dailyGoals.filter { $0.completed }.count
     }
+    
+    func bootstrapDemoData(for idea: BusinessIdea) {
+        guard dailyGoals.isEmpty && milestones.isEmpty else { return }
+        let today = Date()
+        let userIdentifier = userId ?? idea.userId
+        dailyGoals = [
+            DailyGoal(
+                id: UUID().uuidString,
+                businessIdeaId: idea.id,
+                title: "Interview 3 potential customers",
+                description: "Validate the pain point and pricing assumptions",
+                dueDate: Calendar.current.date(byAdding: .day, value: 1, to: today) ?? today,
+                completed: false,
+                priority: "High",
+                createdAt: today,
+                userId: userIdentifier
+            ),
+            DailyGoal(
+                id: UUID().uuidString,
+                businessIdeaId: idea.id,
+                title: "Draft the value proposition",
+                description: "Summarize benefits for landing page copy",
+                dueDate: Calendar.current.date(byAdding: .day, value: 2, to: today) ?? today,
+                completed: false,
+                priority: "Medium",
+                createdAt: today,
+                userId: userIdentifier
+            )
+        ]
+        
+        milestones = [
+            Milestone(
+                id: UUID().uuidString,
+                businessIdeaId: idea.id,
+                title: "Validate Problem",
+                description: "Collect insights from 10 target users",
+                dueDate: Calendar.current.date(byAdding: .day, value: 14, to: today) ?? today,
+                completed: false,
+                order: 1,
+                createdAt: today,
+                userId: userIdentifier
+            ),
+            Milestone(
+                id: UUID().uuidString,
+                businessIdeaId: idea.id,
+                title: "Launch MVP",
+                description: "Ship the first version to early adopters",
+                dueDate: Calendar.current.date(byAdding: .day, value: 35, to: today) ?? today,
+                completed: false,
+                order: 2,
+                createdAt: today,
+                userId: userIdentifier
+            )
+        ]
+        calculateCompletion()
+    }
 }

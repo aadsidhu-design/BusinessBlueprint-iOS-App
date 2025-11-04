@@ -1,9 +1,10 @@
 import SwiftUI
 import Charts
+import Combine
 
 struct DashboardView: View {
+    @EnvironmentObject private var businessPlanStore: BusinessPlanStore
     @StateObject private var viewModel = DashboardViewModel()
-    @State private var selectedIdea: BusinessIdea?
     @State private var showAddGoal = false
     @State private var showAddMilestone = false
     @State private var showAIAssistant = false
@@ -22,130 +23,142 @@ struct DashboardView: View {
                 .ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: 24) {
-                        // Header with AI Assistant Button
-                        HStack {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Your Progress")
-                                    .font(.system(size: 28, weight: .bold))
+                    if businessPlanStore.businessIdeas.isEmpty {
+                        DashboardEmptyState()
+                            .padding(.vertical, 60)
+                    } else {
+                        VStack(spacing: 24) {
+                            // Header with AI Assistant Button
+                            HStack {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Your Progress")
+                                        .font(.system(size: 28, weight: .bold))
+                                        .foregroundColor(.white)
+                                    
+                                    if let ideaTitle = viewModel.selectedBusinessIdea?.title {
+                                        Text(ideaTitle)
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundColor(.white.opacity(0.75))
+                                            .lineLimit(1)
+                                    } else {
+                                        Text("Business Blueprint")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.white.opacity(0.7))
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                Button {
+                                    showAIAssistant = true
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "sparkles")
+                                        Text("AI")
+                                    }
+                                    .font(.subheadline.bold())
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 10)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [.orange, .pink],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .cornerRadius(20)
+                                }
+                            }
+                            .padding(20)
+                            
+                            // Overall Progress Card
+                            ProgressCard(
+                                title: "Overall Progress",
+                                percentage: viewModel.completionPercentage,
+                                icon: "chart.pie.fill"
+                            )
+                            .padding(.horizontal, 20)
+                            
+                            // Stats Row
+                            HStack(spacing: 16) {
+                                StatBox(
+                                    number: "\(viewModel.dailyGoals.count)",
+                                    label: "Total Goals",
+                                    icon: "checkmark.circle.fill"
+                                )
+                                
+                                StatBox(
+                                    number: "\(viewModel.completedGoalsCount)",
+                                    label: "Completed",
+                                    icon: "star.fill"
+                                )
+                                
+                                StatBox(
+                                    number: "\(viewModel.milestones.count)",
+                                    label: "Milestones",
+                                    icon: "flag.fill"
+                                )
+                            }
+                            .padding(.horizontal, 20)
+                            
+                            // Chart
+                            if !viewModel.milestones.isEmpty {
+                                MilestoneChartView(milestones: viewModel.milestones)
+                                    .padding(20)
+                                    .background(Color.white.opacity(0.05))
+                                    .cornerRadius(16)
+                                    .padding(.horizontal, 20)
+                            }
+                            
+                            // Upcoming Goals
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Upcoming Goals")
+                                    .font(.system(size: 18, weight: .bold))
                                     .foregroundColor(.white)
                                 
-                                Text("Business Blueprint")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white.opacity(0.7))
-                            }
-                            
-                            Spacer()
-                            
-                            Button {
-                                showAIAssistant = true
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "sparkles")
-                                    Text("AI")
-                                }
-                                .font(.subheadline.bold())
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                                .background(
-                                    LinearGradient(
-                                        colors: [.orange, .pink],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .cornerRadius(20)
-                            }
-                        }
-                        .padding(20)
-                        
-                        // Overall Progress Card
-                        ProgressCard(
-                            title: "Overall Progress",
-                            percentage: viewModel.completionPercentage,
-                            icon: "chart.pie.fill"
-                        )
-                        .padding(.horizontal, 20)
-                        
-                        // Stats Row
-                        HStack(spacing: 16) {
-                            StatBox(
-                                number: "\(viewModel.dailyGoals.count)",
-                                label: "Total Goals",
-                                icon: "checkmark.circle.fill"
-                            )
-                            
-                            StatBox(
-                                number: "\(viewModel.completedGoalsCount)",
-                                label: "Completed",
-                                icon: "star.fill"
-                            )
-                            
-                            StatBox(
-                                number: "\(viewModel.milestones.count)",
-                                label: "Milestones",
-                                icon: "flag.fill"
-                            )
-                        }
-                        .padding(.horizontal, 20)
-                        
-                        // Chart
-                        if !viewModel.milestones.isEmpty {
-                            MilestoneChartView(milestones: viewModel.milestones)
-                                .padding(20)
-                                .background(Color.white.opacity(0.05))
-                                .cornerRadius(16)
-                                .padding(.horizontal, 20)
-                        }
-                        
-                        // Upcoming Goals
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Upcoming Goals")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.white)
-                            
-                            if viewModel.upcomingGoals.isEmpty {
-                                Text("No upcoming goals. Add one to get started!")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white.opacity(0.5))
-                            } else {
-                                ForEach(viewModel.upcomingGoals) { goal in
-                                    GoalRow(goal: goal, onToggle: {
-                                        viewModel.toggleGoalCompletion(goal.id)
-                                    })
+                                if viewModel.upcomingGoals.isEmpty {
+                                    Text("No upcoming goals. Add one to get started!")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.white.opacity(0.5))
+                                } else {
+                                    ForEach(viewModel.upcomingGoals) { goal in
+                                        GoalRow(goal: goal, onToggle: {
+                                            viewModel.toggleGoalCompletion(goal.id)
+                                        })
+                                    }
                                 }
                             }
-                        }
-                        .padding(20)
-                        .background(Color.white.opacity(0.05))
-                        .cornerRadius(16)
-                        .padding(.horizontal, 20)
-                        
-                        // Milestones List
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Milestones")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.white)
+                            .padding(20)
+                            .background(Color.white.opacity(0.05))
+                            .cornerRadius(16)
+                            .padding(.horizontal, 20)
                             
-                            if viewModel.milestones.isEmpty {
-                                Text("No milestones yet. Create your first one!")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white.opacity(0.5))
-                            } else {
-                                ForEach(viewModel.milestones.sorted { $0.order < $1.order }) { milestone in
-                                    MilestoneRow(milestone: milestone, onToggle: {
-                                        viewModel.toggleMilestoneCompletion(milestone.id)
-                                    })
+                            // Milestones List
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Milestones")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.white)
+                                
+                                if viewModel.milestones.isEmpty {
+                                    Text("No milestones yet. Create your first one!")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.white.opacity(0.5))
+                                } else {
+                                    ForEach(viewModel.milestones.sorted { $0.order < $1.order }) { milestone in
+                                        MilestoneRow(milestone: milestone, onToggle: {
+                                            viewModel.toggleMilestoneCompletion(milestone.id)
+                                        })
+                                    }
                                 }
                             }
+                            .padding(20)
+                            .background(Color.white.opacity(0.05))
+                            .cornerRadius(16)
+                            .padding(.horizontal, 20)
                         }
-                        .padding(20)
-                        .background(Color.white.opacity(0.05))
-                        .cornerRadius(16)
-                        .padding(.horizontal, 20)
+                        .padding(.vertical, 20)
                     }
-                    .padding(.vertical, 20)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -201,6 +214,49 @@ struct DashboardView: View {
                 ))
             }
         }
+        .onAppear {
+            viewModel.selectedBusinessIdea = businessPlanStore.selectedBusinessIdea
+            if let idea = viewModel.selectedBusinessIdea {
+                viewModel.bootstrapDemoData(for: idea)
+            }
+        }
+        .onReceive(businessPlanStore.$businessIdeas) { _ in
+            viewModel.selectedBusinessIdea = businessPlanStore.selectedBusinessIdea
+            if let idea = viewModel.selectedBusinessIdea {
+                viewModel.bootstrapDemoData(for: idea)
+            }
+        }
+        .onReceive(businessPlanStore.$selectedIdeaID) { _ in
+            viewModel.selectedBusinessIdea = businessPlanStore.selectedBusinessIdea
+            if let idea = viewModel.selectedBusinessIdea {
+                viewModel.bootstrapDemoData(for: idea)
+            }
+        }
+    }
+}
+
+struct DashboardEmptyState: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "lightbulb")
+                .font(.system(size: 54))
+                .foregroundColor(.white.opacity(0.6))
+            
+            Text("Create Your Blueprint")
+                .font(.system(size: 22, weight: .bold))
+                .foregroundColor(.white)
+            
+            Text("Complete the AI quiz to unlock a personalized business dashboard, daily goals, and smart milestones.")
+                .font(.system(size: 14))
+                .foregroundColor(.white.opacity(0.65))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(40)
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(20)
+        .padding(.horizontal, 24)
     }
 }
 

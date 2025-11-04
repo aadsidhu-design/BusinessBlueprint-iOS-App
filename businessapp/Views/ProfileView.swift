@@ -1,18 +1,26 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @State private var user = UserProfile(
-        id: UUID().uuidString,
-        email: "user@example.com",
-        firstName: "John",
-        lastName: "Doe",
-        skills: ["Programming", "Design"],
-        personality: ["Creative", "Analytical"],
-        interests: ["Technology", "Business"],
-        createdAt: Date(),
-        subscriptionTier: "free"
-    )
+    @EnvironmentObject private var businessPlanStore: BusinessPlanStore
     @State private var showPremiumOptions = false
+    
+    private var profile: UserProfile {
+        businessPlanStore.userProfile ?? UserProfile(
+            id: UUID().uuidString,
+            email: "founder@example.com",
+            firstName: "Founder",
+            lastName: "",
+            skills: [],
+            personality: [],
+            interests: [],
+            createdAt: Date(),
+            subscriptionTier: "free"
+        )
+    }
+    
+    private var ideaCount: Int {
+        businessPlanStore.businessIdeas.count
+    }
     
     var body: some View {
         NavigationStack {
@@ -55,16 +63,16 @@ struct ProfileView: View {
                             }
                             
                             VStack(spacing: 4) {
-                                Text("\(user.firstName) \(user.lastName)")
+                                Text("\(profile.firstName) \(profile.lastName)")
                                     .font(.system(size: 24, weight: .bold))
                                     .foregroundColor(.white)
                                 
-                                Text(user.email)
+                                Text(profile.email)
                                     .font(.system(size: 14))
                                     .foregroundColor(.white.opacity(0.7))
                             }
                             
-                            SubscriptionBadge(tier: user.subscriptionTier)
+                            SubscriptionBadge(tier: profile.subscriptionTier)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(24)
@@ -74,9 +82,9 @@ struct ProfileView: View {
                         
                         // Stats
                         HStack(spacing: 12) {
-                            ProfileStat(number: "5", label: "Ideas")
-                            ProfileStat(number: "12", label: "Goals")
-                            ProfileStat(number: "3", label: "Milestones")
+                            ProfileStat(number: "\(ideaCount)", label: "Ideas")
+                            ProfileStat(number: "0", label: "Goals")
+                            ProfileStat(number: "0", label: "Milestones")
                         }
                         .padding(.horizontal, 20)
                         
@@ -86,9 +94,9 @@ struct ProfileView: View {
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundColor(.white)
                             
-                            ProfileInfoSection(title: "Skills", items: user.skills)
-                            ProfileInfoSection(title: "Personality", items: user.personality)
-                            ProfileInfoSection(title: "Interests", items: user.interests)
+                            ProfileInfoSection(title: "Skills", items: profile.skills)
+                            ProfileInfoSection(title: "Personality", items: profile.personality)
+                            ProfileInfoSection(title: "Interests", items: profile.interests)
                         }
                         .padding(20)
                         .background(Color.white.opacity(0.05))

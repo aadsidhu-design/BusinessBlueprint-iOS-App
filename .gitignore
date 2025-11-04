@@ -1,0 +1,62 @@
+# Xcode
+.DS_Store
+*.pbxuser
+*.perspectivev3
+*.xcworkspace/xcuserdata/
+*.xcworkspace/xcshareddata/
+xcuserdata/
+*.xcodeproj/xcuserdata/
+DerivedData/
+*.hmap
+*.ipa
+*.dsym/
+
+# Swift
+.swiftpm/
+Package.resolved
+*.swiftmodule
+*.swiftdoc
+
+# Pods
+Pods/
+Podfile.lock
+
+# ⚠️ SECURITY: API Keys and Secrets - NEVER commit these
+.env
+.env.local
+.env.*.local
+*.plist.local
+GoogleService-Info.plist
+Config/Secrets.swift
+Config/SecureConfig.swift
+# Resources/Info.plist - Keep this file but use $(VAR) placeholders for secrets
+
+# Sensitive config files
+**/Secrets/*
+**/credentials/*
+**/*.key
+**/*.pem
+**/*.p12
+
+# Build artifacts
+build/
+dist/
+*.xcarchive
+
+# IDE
+.vscode/
+.idea/
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+
+# OS
+Thumbs.db
+.cache/
+
+# Sensitive
+*.key
+*.p8
+*.p12

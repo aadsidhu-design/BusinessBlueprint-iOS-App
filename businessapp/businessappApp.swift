@@ -9,11 +9,13 @@ import SwiftUI
 
 @main
 struct businessappApp: App {
-    @StateObject private var authVM = AuthViewModel()
+    @StateObject private var authVM: AuthViewModel
+    @StateObject private var businessPlanStore = BusinessPlanStore()
     
     init() {
-        // Check login status when app launches
-        AuthViewModel().checkLoginStatus()
+        let authViewModel = AuthViewModel()
+        _authVM = StateObject(wrappedValue: authViewModel)
+        authViewModel.checkLoginStatus()
     }
     
     var body: some Scene {
@@ -21,9 +23,11 @@ struct businessappApp: App {
             if authVM.isLoggedIn {
                 RootView()
                     .environmentObject(authVM)
+                    .environmentObject(businessPlanStore)
             } else {
                 LaunchView()
                     .environmentObject(authVM)
+                    .environmentObject(businessPlanStore)
             }
         }
     }

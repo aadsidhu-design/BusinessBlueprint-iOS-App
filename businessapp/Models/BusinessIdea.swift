@@ -97,3 +97,49 @@ struct UserProfile: Identifiable, Codable {
         case subscriptionTier = "subscription_tier"
     }
 }
+
+extension BusinessIdea {
+    func withUserId(_ userId: String) -> BusinessIdea {
+        BusinessIdea(
+            id: id,
+            title: title,
+            description: description,
+            category: category,
+            difficulty: difficulty,
+            estimatedRevenue: estimatedRevenue,
+            timeToLaunch: timeToLaunch,
+            requiredSkills: requiredSkills,
+            startupCost: startupCost,
+            profitMargin: profitMargin,
+            marketDemand: marketDemand,
+            competition: competition,
+            createdAt: createdAt,
+            userId: userId,
+            personalizedNotes: personalizedNotes,
+            saved: saved,
+            progress: progress
+        )
+    }
+    
+    func updating(saved: Bool? = nil, progress: Int? = nil) -> BusinessIdea {
+        BusinessIdea(
+            id: id,
+            title: title,
+            description: description,
+            category: category,
+            difficulty: difficulty,
+            estimatedRevenue: estimatedRevenue,
+            timeToLaunch: timeToLaunch,
+            requiredSkills: requiredSkills,
+            startupCost: startupCost,
+            profitMargin: profitMargin,
+            marketDemand: marketDemand,
+            competition: competition,
+            createdAt: createdAt,
+            userId: userId,
+            personalizedNotes: personalizedNotes,
+            saved: saved ?? self.saved,
+            progress: progress ?? self.progress
+        )
+    }
+}

@@ -2,18 +2,14 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject var authVM: AuthViewModel
-    @State private var hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
-    @State private var showQuiz = false
+    @EnvironmentObject var businessPlanStore: BusinessPlanStore
     
     var body: some View {
         Group {
-            if !hasCompletedOnboarding {
-                QuizView(onComplete: {
-                    UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-                    hasCompletedOnboarding = true
-                })
-            } else {
+            if businessPlanStore.quizCompleted {
                 MainTabView()
+            } else {
+                QuizView()
             }
         }
     }

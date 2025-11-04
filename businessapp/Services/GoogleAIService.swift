@@ -20,7 +20,7 @@ struct AIBusinessAnalysis: Codable {
 class GoogleAIService {
     static let shared = GoogleAIService()
     
-    private let apiKey = FirebaseConfig.googleAIAPIKey
+    private let apiKey = Config.googleAIKey
     private let baseURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
     
     // MARK: - Generate Business Ideas
@@ -85,7 +85,29 @@ class GoogleAIService {
         businessIdea: BusinessIdea,
         completion: @escaping (Result<String, Error>) -> Void
     ) {
-        let prompt = "Provide practical advice and next steps for the following business idea: \(businessIdea.title). Description: \(businessIdea.description). Keep response concise and actionable."
+        let prompt = """
+        Provide practical, actionable advice for this business idea:
+        
+        Business: \(businessIdea.title)
+        Description: \(businessIdea.description)
+        Category: \(businessIdea.category)
+        
+        Format your response with clear sections:
+        
+        🎯 NEXT STEPS:
+        - [Step 1]
+        - [Step 2]
+        - [Step 3]
+        
+        💡 KEY RECOMMENDATIONS:
+        - [Recommendation 1]
+        - [Recommendation 2]
+        
+        ⚠️ WATCH OUT FOR:
+        - [Potential pitfall to avoid]
+        
+        Keep it concise, specific, and actionable.
+        """
         
         let requestBody: [String: Any] = [
             "contents": [
@@ -183,8 +205,14 @@ class GoogleAIService {
         Description: \(businessIdea.description)
         Current Progress: \(currentProgress)%
         
-        Make goals SMART (Specific, Measurable, Achievable, Relevant, Time-bound).
-        Format: Return only the 3 goals, one per line, numbered 1-3.
+        Make each goal SMART (Specific, Measurable, Achievable, Relevant, Time-bound).
+        
+        Format your response as exactly 3 lines, each starting with a number:
+        1. [Specific action to take today]
+        2. [Specific action to take today]
+        3. [Specific action to take today]
+        
+        Do not include any other text, headers, or explanations.
         """
         
         makeAIRequest(prompt: prompt) { result in
@@ -209,7 +237,20 @@ class GoogleAIService {
         User Context: \(context)
         Current Goals: \(userGoals.joined(separator: ", "))
         
-        Provide personalized, actionable advice in 2-3 paragraphs. Be specific and encouraging.
+        Provide personalized, actionable advice in a clear, readable format:
+        
+        📊 CURRENT SITUATION:
+        [Brief assessment]
+        
+        🚀 PRIORITY ACTIONS:
+        1. [Most important next step]
+        2. [Second priority]
+        3. [Third priority]
+        
+        💪 ENCOURAGEMENT:
+        [Specific, motivating message based on their context]
+        
+        Be specific, encouraging, and action-oriented. Keep it concise (2-3 short paragraphs total).
         """
         
         makeAIRequest(prompt: prompt, completion: completion)
@@ -229,21 +270,32 @@ class GoogleAIService {
         Personality: \(personalityText)
         Interests: \(interestsText)
         
-        For EACH of the 5 ideas, provide this EXACT format:
+        CRITICAL: For EACH of the 5 ideas, use this EXACT format with NO VARIATIONS:
         
-        IDEA [number]
-        Title: [business name]
-        Description: [2-3 compelling sentences]
-        Category: [one word: Tech/Service/Creative/Retail/Consulting]
-        Difficulty: [Easy/Medium/Hard]
-        Revenue: [$X - $Y per year]
-        Launch: [X weeks/months]
-        Skills: [skill1, skill2, skill3]
-        Cost: [$X - $Y]
-        Margin: [X-Y%]
-        Demand: [High/Medium/Low]
-        Competition: [High/Medium/Low]
-        Note: [1 personalized sentence why this fits them]
+        IDEA 1
+        Title: [Concise business name]
+        Description: [2-3 compelling sentences explaining the business concept and value proposition]
+        Category: [MUST be ONE of: Technology, Service, Creative, Retail, Consulting]
+        Difficulty: [MUST be: Easy, Medium, or Hard]
+        Revenue: $[X]K - $[Y]K/year
+        Launch: [X] weeks
+        Skills: [skill1], [skill2], [skill3]
+        Cost: $[X]K - $[Y]K
+        Margin: [X]-[Y]%
+        Demand: [MUST be: High, Medium, or Low]
+        Competition: [MUST be: High, Medium, or Low]
+        Note: [One personalized sentence explaining why this business fits their specific profile]
+        
+        IMPORTANT FORMATTING RULES:
+        - Each field MUST be on its own line
+        - Each field MUST start with the exact label followed by a colon
+        - Revenue format: Use K for thousands (e.g., $50K - $150K/year)
+        - Launch format: Use weeks or months (e.g., 6-8 weeks or 3-4 months)
+        - Skills: Comma-separated list
+        - Cost format: Use K for thousands (e.g., $5K - $15K)
+        - Margin format: Range with dash (e.g., 40-60%)
+        - DO NOT add extra spacing or blank lines between fields
+        - REPEAT this exact structure for all 5 ideas
         
         Make ideas specific, innovative, and tailored to their unique combination of traits.
         """
@@ -254,15 +306,34 @@ class GoogleAIService {
         case 1:
             return """
             Generate 8 diverse skill options for an entrepreneurship quiz.
-            Format: Return ONLY the options, one per line, no numbers or bullets.
+            
+            CRITICAL: Return ONLY the skill names, one per line.
+            Do NOT include:
+            - Numbers (1., 2., etc.)
+            - Bullets (-, *, •)
+            - Headers
+            - Explanations
+            
             Make them varied: technical, creative, business, interpersonal, etc.
+            
+            Example format:
+            Data Analysis
+            Graphic Design
+            Public Speaking
             """
         case 2:
             let skills = previousAnswers["skills"] ?? []
             return """
             User selected skills: \(skills.joined(separator: ", "))
             Generate 6 personality traits relevant for entrepreneurship that complement these skills.
-            Format: Return ONLY the traits, one per line, no numbers or bullets.
+            
+            CRITICAL: Return ONLY the trait names, one per line.
+            Do NOT include numbers, bullets, headers, or explanations.
+            
+            Example format:
+            Analytical
+            Creative
+            Risk-Taker
             """
         case 3:
             let skills = previousAnswers["skills"] ?? []
@@ -270,7 +341,14 @@ class GoogleAIService {
             return """
             User profile - Skills: \(skills.joined(separator: ", ")), Personality: \(personality.joined(separator: ", "))
             Generate 8 business interest areas that align with this profile.
-            Format: Return ONLY the interests, one per line, no numbers or bullets.
+            
+            CRITICAL: Return ONLY the interest areas, one per line.
+            Do NOT include numbers, bullets, headers, or explanations.
+            
+            Example format:
+            Technology
+            E-commerce
+            Consulting
             """
         default:
             return ""

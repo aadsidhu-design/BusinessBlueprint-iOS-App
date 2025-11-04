@@ -1,9 +1,8 @@
 import SwiftUI
 
 struct BusinessIdeasView: View {
+    @EnvironmentObject private var businessPlanStore: BusinessPlanStore
     @StateObject private var viewModel = BusinessIdeaViewModel()
-    @State private var selectedIdea: BusinessIdea?
-    @State private var showDetails = false
     
     var body: some View {
         NavigationStack {
@@ -32,6 +31,13 @@ struct BusinessIdeasView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(20)
                         
+                        if let error = viewModel.errorMessage {
+                            Text(error)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.yellow)
+                                .padding(.horizontal, 20)
+                        }
+                        
                         if viewModel.isLoading {
                             ProgressView()
                                 .scaleEffect(1.5)
@@ -47,6 +53,9 @@ struct BusinessIdeasView: View {
                                     NavigationLink(destination: IdeaDetailView(idea: idea, viewModel: viewModel)) {
                                         IdeaCard(idea: idea)
                                     }
+                                    .simultaneousGesture(TapGesture().onEnded {
+                                        viewModel.selectIdea(idea)
+                                    })
                                 }
                             }
                             .padding(20)
@@ -57,7 +66,7 @@ struct BusinessIdeasView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .onAppear {
-            viewModel.fetchIdeas()
+            viewModel.attachStore(businessPlanStore)
         }
     }
 }
@@ -146,6 +155,10 @@ struct IdeaDetailView: View {
     @State private var aiSuggestions = ""
     @State private var isLoadingAI = false
     
+    private var currentIdea: BusinessIdea {
+        viewModel.selectedIdea ?? idea
+    }
+    
     var body: some View {
         ZStack {
             LinearGradient(
@@ -164,54 +177,54 @@ struct IdeaDetailView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(idea.title)
+                                Text(currentIdea.title)
                                     .font(.system(size: 28, weight: .bold))
                                     .foregroundColor(.white)
                                 
-                                Text(idea.category)
+                                Text(currentIdea.category)
                                     .font(.system(size: 14))
                                     .foregroundColor(Color(red: 1, green: 0.6, blue: 0.2))
                             }
                             
                             Spacer()
                             
-                            Image(systemName: idea.saved ? "star.fill" : "star")
+                            Image(systemName: currentIdea.saved ? "star.fill" : "star")
                                 .font(.system(size: 24))
-                                .foregroundColor(idea.saved ? .yellow : .white.opacity(0.5))
+                                .foregroundColor(currentIdea.saved ? .yellow : .white.opacity(0.5))
                         }
                     }
                     .padding(20)
                     
                     // Description
-                    DetailSection(title: "Overview", content: idea.description)
+                    DetailSection(title: "Overview", content: currentIdea.description)
                         .padding(.horizontal, 20)
                     
                     // Key Details Grid
                     VStack(spacing: 12) {
                         DetailGrid(
                             items: [
-                                ("💰", "Revenue", idea.estimatedRevenue),
-                                ("⏱️", "Launch Time", idea.timeToLaunch),
-                                ("🎯", "Difficulty", idea.difficulty),
-                                ("💵", "Startup Cost", idea.startupCost),
-                                ("📊", "Profit Margin", idea.profitMargin),
-                                ("📈", "Market Demand", idea.marketDemand),
-                                ("🏆", "Competition", idea.competition),
-                                ("⚙️", "Skills Required", idea.requiredSkills.joined(separator: ", "))
+                                ("💰", "Revenue", currentIdea.estimatedRevenue),
+                                ("⏱️", "Launch Time", currentIdea.timeToLaunch),
+                                ("🎯", "Difficulty", currentIdea.difficulty),
+                                ("💵", "Startup Cost", currentIdea.startupCost),
+                                ("📊", "Profit Margin", currentIdea.profitMargin),
+                                ("📈", "Market Demand", currentIdea.marketDemand),
+                                ("🏆", "Competition", currentIdea.competition),
+                                ("⚙️", "Skills Required", currentIdea.requiredSkills.joined(separator: ", "))
                             ]
                         )
                     }
                     .padding(20)
                     
                     // Personalized Notes
-                    DetailSection(title: "Why This For You?", content: idea.personalizedNotes)
+                    DetailSection(title: "Why This For You?", content: currentIdea.personalizedNotes)
                         .padding(.horizontal, 20)
                     
                     // AI Suggestions Button
                     Button(action: {
                         isLoadingAI = true
-                        viewModel.getAISuggestions(for: idea)
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        viewModel.getAISuggestions(for: currentIdea) { suggestions in
+                            aiSuggestions = suggestions
                             isLoadingAI = false
                             showAISuggestions = true
                         }
@@ -242,7 +255,7 @@ struct IdeaDetailView: View {
                     
                     // Action Buttons
                     HStack(spacing: 12) {
-                        Button(action: { viewModel.saveIdea(idea) }) {
+                        Button(action: { viewModel.saveIdea(currentIdea) }) {
                             HStack {
                                 Image(systemName: "bookmark.fill")
                                 Text("Save")
@@ -255,7 +268,7 @@ struct IdeaDetailView: View {
                         }
                         
                         Button(action: {
-                            viewModel.updateProgress(ideaId: idea.id, progress: 25)
+                            viewModel.updateProgress(ideaId: currentIdea.id, progress: 25)
                         }) {
                             HStack {
                                 Image(systemName: "play.fill")
@@ -284,6 +297,9 @@ struct IdeaDetailView: View {
         .navigationBarBackButtonHidden(false)
         .sheet(isPresented: $showAISuggestions) {
             AISuggestionsView(isPresented: $showAISuggestions, suggestions: aiSuggestions)
+        }
+        .onAppear {
+            viewModel.selectIdea(idea)
         }
     }
 }

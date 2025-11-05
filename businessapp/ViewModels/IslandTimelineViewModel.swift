@@ -9,6 +9,7 @@ class IslandTimelineViewModel: ObservableObject {
     @Published var notes: [ProgressNote] = []
     @Published var reminders: [AppReminder] = []
     @Published var boatPosition: CGPoint = .zero
+    @Published var dashboardGoals: [DailyGoal] = []
     
     private var cancellables = Set<AnyCancellable>()
     private let googleAIService = GoogleAIService()
@@ -22,6 +23,139 @@ class IslandTimelineViewModel: ObservableObject {
     init() {
         loadPersistedData()
         setupDefaultIslands()
+    }
+    
+    // MARK: - Connect to Store
+    func connectToStore(_ store: BusinessPlanStore) {
+        // Listen to store changes to sync goals
+        store.$businessIdeas
+            .sink { [weak self] ideas in
+                guard let self = self,
+                      let selectedIdea = store.selectedBusinessIdea else { return }
+                
+                // Regenerate islands if needed
+                if self.islands.count <= 3 && !ideas.isEmpty {
+                    self.syncWithDashboard(businessIdea: selectedIdea)
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
+    // MARK: - Sync with Dashboard Goals
+    func syncWithDashboard(businessIdea: BusinessIdea) {
+        // If we have real goals from dashboard, use them
+        if !dashboardGoals.isEmpty {
+            generateIslandsFromBusinessPlan(businessIdea: businessIdea, goals: dashboardGoals)
+        } else {
+            // Generate sample goals for now
+            let sampleGoals = createSampleGoals(for: businessIdea)
+            generateIslandsFromBusinessPlan(businessIdea: businessIdea, goals: sampleGoals)
+        }
+    }
+    
+    private func createSampleGoals(for idea: BusinessIdea) -> [DailyGoal] {
+        let today = Date()
+        return [
+            DailyGoal(
+                id: UUID().uuidString,
+                businessIdeaId: idea.id,
+                title: "Research market competitors",
+                description: "Identify key competitors and analyze their offerings",
+                dueDate: Calendar.current.date(byAdding: .day, value: 1, to: today) ?? today,
+                completed: false,
+                priority: "High",
+                createdAt: today,
+                userId: idea.userId
+            ),
+            DailyGoal(
+                id: UUID().uuidString,
+                businessIdeaId: idea.id,
+                title: "Create initial business plan",
+                description: "Draft core business model and strategy",
+                dueDate: Calendar.current.date(byAdding: .day, value: 3, to: today) ?? today,
+                completed: false,
+                priority: "High",
+                createdAt: today,
+                userId: idea.userId
+            ),
+            DailyGoal(
+                id: UUID().uuidString,
+                businessIdeaId: idea.id,
+                title: "Design brand identity",
+                description: "Create logo and brand guidelines",
+                dueDate: Calendar.current.date(byAdding: .day, value: 7, to: today) ?? today,
+                completed: false,
+                priority: "Medium",
+                createdAt: today,
+                userId: idea.userId
+            ),
+            DailyGoal(
+                id: UUID().uuidString,
+                businessIdeaId: idea.id,
+                title: "Build MVP prototype",
+                description: "Create minimum viable product",
+                dueDate: Calendar.current.date(byAdding: .day, value: 14, to: today) ?? today,
+                completed: false,
+                priority: "High",
+                createdAt: today,
+                userId: idea.userId
+            ),
+            DailyGoal(
+                id: UUID().uuidString,
+                businessIdeaId: idea.id,
+                title: "Test with early users",
+                description: "Get feedback from 10 beta users",
+                dueDate: Calendar.current.date(byAdding: .day, value: 21, to: today) ?? today,
+                completed: false,
+                priority: "High",
+                createdAt: today,
+                userId: idea.userId
+            ),
+            DailyGoal(
+                id: UUID().uuidString,
+                businessIdeaId: idea.id,
+                title: "Launch marketing campaign",
+                description: "Start social media and email marketing",
+                dueDate: Calendar.current.date(byAdding: .day, value: 30, to: today) ?? today,
+                completed: false,
+                priority: "Medium",
+                createdAt: today,
+                userId: idea.userId
+            ),
+            DailyGoal(
+                id: UUID().uuidString,
+                businessIdeaId: idea.id,
+                title: "Secure first customers",
+                description: "Close first 5 paying customers",
+                dueDate: Calendar.current.date(byAdding: .day, value: 45, to: today) ?? today,
+                completed: false,
+                priority: "High",
+                createdAt: today,
+                userId: idea.userId
+            ),
+            DailyGoal(
+                id: UUID().uuidString,
+                businessIdeaId: idea.id,
+                title: "Iterate based on feedback",
+                description: "Implement user suggestions and improvements",
+                dueDate: Calendar.current.date(byAdding: .day, value: 60, to: today) ?? today,
+                completed: false,
+                priority: "Medium",
+                createdAt: today,
+                userId: idea.userId
+            ),
+            DailyGoal(
+                id: UUID().uuidString,
+                businessIdeaId: idea.id,
+                title: "Scale operations",
+                description: "Hire team and expand to new markets",
+                dueDate: Calendar.current.date(byAdding: .day, value: 90, to: today) ?? today,
+                completed: false,
+                priority: "Medium",
+                createdAt: today,
+                userId: idea.userId
+            )
+        ]
     }
     
     // MARK: - Generate Islands from Business Plan

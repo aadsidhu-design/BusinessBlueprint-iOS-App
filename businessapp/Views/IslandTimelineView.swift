@@ -91,17 +91,25 @@ struct IslandTimelineView: View {
         .onAppear {
             setupTimeline()
             animateWaves = true
+            // Connect to store for real-time updates
+            viewModel.connectToStore(businessPlanStore)
         }
     }
     
     private func setupTimeline() {
-        guard let businessIdea = businessPlanStore.selectedBusinessIdea else { return }
+        guard let businessIdea = businessPlanStore.selectedBusinessIdea else {
+            // If no selected idea, use first available or return
+            guard let firstIdea = businessPlanStore.businessIdeas.first else { return }
+            viewModel.syncWithDashboard(businessIdea: firstIdea)
+            if let firstIsland = viewModel.islands.first {
+                viewModel.boatPosition = firstIsland.position
+            }
+            return
+        }
         
         // Generate islands from business plan if not already set
         if viewModel.islands.count <= 3 {
-            // Get goals from dashboard
-            let sampleGoals = createSampleGoals(for: businessIdea)
-            viewModel.generateIslandsFromBusinessPlan(businessIdea: businessIdea, goals: sampleGoals)
+            viewModel.syncWithDashboard(businessIdea: businessIdea)
         }
         
         // Set initial boat position
@@ -110,19 +118,7 @@ struct IslandTimelineView: View {
         }
     }
     
-    private func createSampleGoals(for idea: BusinessIdea) -> [DailyGoal] {
-        return [
-            DailyGoal(title: "Research market competitors", isCompleted: false),
-            DailyGoal(title: "Create initial business plan", isCompleted: false),
-            DailyGoal(title: "Design brand identity", isCompleted: false),
-            DailyGoal(title: "Build MVP prototype", isCompleted: false),
-            DailyGoal(title: "Test with early users", isCompleted: false),
-            DailyGoal(title: "Launch marketing campaign", isCompleted: false),
-            DailyGoal(title: "Secure first customers", isCompleted: false),
-            DailyGoal(title: "Iterate based on feedback", isCompleted: false),
-            DailyGoal(title: "Scale operations", isCompleted: false)
-        ]
-    }
+    // This function is no longer needed since ViewModel handles goal creation
 }
 
 // MARK: - Ocean Background

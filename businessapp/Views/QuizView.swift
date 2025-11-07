@@ -10,21 +10,42 @@ struct QuizView: View {
     
     var body: some View {
         ZStack {
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 0.05, green: 0.15, blue: 0.35),
-                    Color(red: 0.1, green: 0.2, blue: 0.4)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            AppColors.backgroundGradient
+                .ignoresSafeArea()
             
-            VStack {
-                ProgressView(value: Double(stepProgress()), total: 5.0)
-                    .tint(Color(red: 1, green: 0.6, blue: 0.2))
-                    .padding(20)
+            VStack(spacing: 0) {
+                // Animated Progress Bar
+                VStack(spacing: 8) {
+                    HStack {
+                        Text("Step \(stepProgress()) of 5")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text("\(Int((Double(stepProgress()) / 5.0) * 100))%")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(AppColors.primaryOrange)
+                    }
+                    .padding(.horizontal, 24)
+                    
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.gray.opacity(0.2))
+                                .frame(height: 8)
+                            
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(AppColors.primaryGradient)
+                                .frame(width: geometry.size.width * (Double(stepProgress()) / 5.0), height: 8)
+                                .animation(AnimationHelpers.smoothSpring, value: stepProgress())
+                        }
+                    }
+                    .frame(height: 8)
+                    .padding(.horizontal, 24)
+                }
+                .padding(.vertical, 16)
                 
+                // Content
                 ScrollView {
                     VStack(spacing: 24) {
                         switch viewModel.currentStep {
@@ -44,69 +65,59 @@ struct QuizView: View {
                             ResultsStepView(viewModel: viewModel)
                         }
                     }
-                    .padding(20)
+                    .padding(24)
                 }
                 
-                HStack(spacing: 12) {
-                    if viewModel.currentStep != .welcome && viewModel.currentStep != .results {
-                        Button(action: { viewModel.previousStep() }) {
-                            Text("Back")
-                                .font(.system(size: 16, weight: .semibold))
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 52)
-                                .foregroundColor(.white)
-                                .background(Color.white.opacity(0.2))
-                                .cornerRadius(12)
-                        }
-                    }
-                    
+                // Navigation Buttons
+                VStack(spacing: 12) {
                     if viewModel.currentStep == .results {
-                        Button(action: completeQuiz) {
-                            Text("Continue to Dashboard")
-                                .font(.system(size: 16, weight: .semibold))
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 52)
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color(red: 1, green: 0.6, blue: 0.2),
-                                            Color(red: 1, green: 0.4, blue: 0.1)
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
+                        PlayfulButton(
+                            title: "Continue",
+                            icon: "arrow.right.circle.fill",
+                            gradient: AppColors.successGradient,
+                            isLoading: viewModel.isLoading
+                        ) {
+                            completeQuiz()
                         }
-                        .disabled(viewModel.isLoading)
-                        .opacity(viewModel.isLoading ? 0.6 : 1)
+                        .padding(.horizontal, 24)
                     } else if viewModel.currentStep != .loading {
-                        Button(action: { viewModel.nextStep() }) {
-                            Text("Next")
-                                .font(.system(size: 16, weight: .semibold))
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 52)
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color(red: 1, green: 0.6, blue: 0.2),
-                                            Color(red: 1, green: 0.4, blue: 0.1)
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
+                        HStack(spacing: 12) {
+                            if viewModel.currentStep != .welcome {
+                                Button {
+                                    withAnimation(AnimationHelpers.buttonPress) {
+                                        viewModel.previousStep()
+                                    }
+                                } label: {
+                                    Text("Back")
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 56)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .fill(Color(.systemGray6))
+                                        )
+                                }
+                            }
+                            
+                            PlayfulButton(
+                                title: "Next",
+                                icon: "arrow.right.circle.fill",
+                                gradient: AppColors.primaryGradient,
+                                disabled: !canAdvance
+                            ) {
+                                withAnimation(AnimationHelpers.buttonPress) {
+                                    viewModel.nextStep()
+                                }
+                            }
                         }
-                        .disabled(!canAdvance)
-                        .opacity(canAdvance ? 1 : 0.5)
+                        .padding(.horizontal, 24)
                     }
                 }
-                .padding(20)
+                .padding(.vertical, 16)
             }
         }
+        .navigationBarTitleDisplayMode(.inline)
     }
     
     private var canAdvance: Bool {
@@ -169,26 +180,49 @@ struct QuizView: View {
 }
 
 struct WelcomeStepView: View {
+    @State private var animate = false
+    
     var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 60))
-                .foregroundColor(.yellow)
-            
-            Text("Let's Discover Your Perfect Business!")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(.white)
-            
-            Text("Answer a few quick questions and our AI will generate personalized business ideas tailored to your unique skills, personality, and interests.")
-                .font(.system(size: 16))
-                .foregroundColor(.white.opacity(0.8))
-                .lineSpacing(2)
-            
-            VStack(spacing: 12) {
-                InfoBadge("⏱️ Takes about 5 minutes")
-                InfoBadge("🤖 Powered by advanced AI")
-                InfoBadge("🎯 Completely personalized")
+        ModernCard(padding: 32) {
+            VStack(spacing: 24) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [AppColors.primaryOrange.opacity(0.2), AppColors.primaryPink.opacity(0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 100, height: 100)
+                    
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 50))
+                        .foregroundStyle(AppColors.primaryGradient)
+                        .scaleEffect(animate ? 1.1 : 1.0)
+                        .animation(
+                            Animation.easeInOut(duration: 1.5)
+                                .repeatForever(autoreverses: true),
+                            value: animate
+                        )
+                }
+                .bounceEntrance()
+                
+                Text("Let's Discover Your Perfect Business!")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .multilineTextAlignment(.center)
+                    .fadeInUp(delay: 0.2)
+                
+                Text("Answer a few quick questions and our AI will generate personalized business ideas tailored to your unique skills, personality, and interests.")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .fadeInUp(delay: 0.3)
             }
+        }
+        .onAppear {
+            animate = true
         }
     }
 }
@@ -198,38 +232,41 @@ struct SkillsStepView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("What are your key skills?")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-                    
-                    Text("Select all that apply")
-                        .font(.system(size: 14))
-                        .foregroundColor(.white.opacity(0.7))
-                }
+            VStack(alignment: .leading, spacing: 8) {
+                Text("What are your key skills?")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
                 
-                Spacer()
-                
-                if viewModel.isGeneratingOptions {
-                    HStack(spacing: 6) {
+                Text("Select all that apply")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .fadeInUp()
+            
+            if viewModel.isGeneratingOptions {
+                ModernCard {
+                    HStack {
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .orange))
-                            .scaleEffect(0.8)
-                        Text("AI")
-                            .font(.caption.bold())
-                            .foregroundColor(.orange)
+                            .tint(AppColors.primaryOrange)
+                        Text("Generating options...")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                     }
                 }
             }
             
-            VStack(spacing: 12) {
-                ForEach(viewModel.allSkills, id: \.self) { skill in
-                    ToggleChip(
-                        label: skill,
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+                ForEach(Array(viewModel.allSkills.enumerated()), id: \.element) { index, skill in
+                    SelectionChip(
+                        text: skill,
                         isSelected: viewModel.selectedSkills.contains(skill),
-                        action: { viewModel.toggleSkill(skill) }
-                    )
+                        color: AppColors.primaryOrange
+                    ) {
+                        withAnimation(AnimationHelpers.buttonPress) {
+                            viewModel.toggleSkill(skill)
+                        }
+                        HapticManager.shared.trigger(viewModel.selectedSkills.contains(skill) ? .light : .medium)
+                    }
+                    .fadeInUp(delay: Double(index) * 0.05)
                 }
             }
         }
@@ -241,38 +278,41 @@ struct PersonalityStepView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("Describe your personality")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-                    
-                    Text("Choose traits that define you")
-                        .font(.system(size: 14))
-                        .foregroundColor(.white.opacity(0.7))
-                }
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Describe your personality")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
                 
-                Spacer()
-                
-                if viewModel.isGeneratingOptions {
-                    HStack(spacing: 6) {
+                Text("Choose traits that define you")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .fadeInUp()
+            
+            if viewModel.isGeneratingOptions {
+                ModernCard {
+                    HStack {
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .orange))
-                            .scaleEffect(0.8)
-                        Text("AI")
-                            .font(.caption.bold())
-                            .foregroundColor(.orange)
+                            .tint(AppColors.primaryOrange)
+                        Text("Generating options...")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                     }
                 }
             }
             
-            VStack(spacing: 12) {
-                ForEach(viewModel.allPersonality, id: \.self) { trait in
-                    ToggleChip(
-                        label: trait,
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+                ForEach(Array(viewModel.allPersonality.enumerated()), id: \.element) { index, trait in
+                    SelectionChip(
+                        text: trait,
                         isSelected: viewModel.selectedPersonality.contains(trait),
-                        action: { viewModel.togglePersonality(trait) }
-                    )
+                        color: AppColors.primaryPink
+                    ) {
+                        withAnimation(AnimationHelpers.buttonPress) {
+                            viewModel.togglePersonality(trait)
+                        }
+                        HapticManager.shared.trigger(viewModel.selectedPersonality.contains(trait) ? .light : .medium)
+                    }
+                    .fadeInUp(delay: Double(index) * 0.05)
                 }
             }
         }
@@ -284,38 +324,41 @@ struct InterestsStepView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("What interests you?")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-                    
-                    Text("Select your areas of interest")
-                        .font(.system(size: 14))
-                        .foregroundColor(.white.opacity(0.7))
-                }
+            VStack(alignment: .leading, spacing: 8) {
+                Text("What interests you?")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
                 
-                Spacer()
-                
-                if viewModel.isGeneratingOptions {
-                    HStack(spacing: 6) {
+                Text("Select your areas of interest")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .fadeInUp()
+            
+            if viewModel.isGeneratingOptions {
+                ModernCard {
+                    HStack {
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .orange))
-                            .scaleEffect(0.8)
-                        Text("AI")
-                            .font(.caption.bold())
-                            .foregroundColor(.orange)
+                            .tint(AppColors.primaryOrange)
+                        Text("Generating options...")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                     }
                 }
             }
             
-            VStack(spacing: 12) {
-                ForEach(viewModel.allInterests, id: \.self) { interest in
-                    ToggleChip(
-                        label: interest,
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+                ForEach(Array(viewModel.allInterests.enumerated()), id: \.element) { index, interest in
+                    SelectionChip(
+                        text: interest,
                         isSelected: viewModel.selectedInterests.contains(interest),
-                        action: { viewModel.toggleInterest(interest) }
-                    )
+                        color: AppColors.brightBlue
+                    ) {
+                        withAnimation(AnimationHelpers.buttonPress) {
+                            viewModel.toggleInterest(interest)
+                        }
+                        HapticManager.shared.trigger(viewModel.selectedInterests.contains(interest) ? .light : .medium)
+                    }
+                    .fadeInUp(delay: Double(index) * 0.05)
                 }
             }
         }
@@ -329,267 +372,198 @@ struct PersonalInfoStepView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Tell us about yourself")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.white)
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .fadeInUp()
             
             VStack(spacing: 16) {
-                TextField("First Name", text: $firstName)
-                    .textInputAutocapitalization(.words)
-                    .disableAutocorrection(true)
-                    .padding(14)
-                    .background(Color.white.opacity(0.1))
-                    .cornerRadius(12)
-                    .foregroundColor(.white)
+                ModernTextField(
+                    title: "First Name",
+                    text: $firstName,
+                    placeholder: "John",
+                    icon: "person.fill"
+                )
+                .fadeInUp(delay: 0.1)
                 
-                TextField("Last Name", text: $lastName)
-                    .textInputAutocapitalization(.words)
-                    .disableAutocorrection(true)
-                    .padding(14)
-                    .background(Color.white.opacity(0.1))
-                    .cornerRadius(12)
-                    .foregroundColor(.white)
+                ModernTextField(
+                    title: "Last Name",
+                    text: $lastName,
+                    placeholder: "Doe",
+                    icon: "person.fill"
+                )
+                .fadeInUp(delay: 0.2)
             }
         }
     }
 }
 
 struct LoadingStepView: View {
-    var body: some View {
-        VStack(spacing: 32) {
-            // AI Brain Animation
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [.orange.opacity(0.3), .pink.opacity(0.3)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 120, height: 120)
-                
-                Image(systemName: "brain.head.profile")
-                    .font(.system(size: 50))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.orange, .pink],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                
-                ProgressView()
-                    .scaleEffect(2.5)
-                    .tint(.white.opacity(0.8))
-            }
-            
-            VStack(spacing: 12) {
-                HStack(spacing: 8) {
-                    Image(systemName: "sparkles")
-                        .foregroundColor(.orange)
-                    Text("AI is Thinking...")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(.white)
-                }
-                
-                Text("Google Gemini is analyzing your profile and generating personalized business ideas tailored just for you")
-                    .font(.system(size: 14))
-                    .foregroundColor(.white.opacity(0.7))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 20)
-            }
-            
-            // AI Process Steps
-            VStack(alignment: .leading, spacing: 16) {
-                AIProcessStep(icon: "person.crop.circle.fill.badge.checkmark", text: "Analyzing your skills & personality")
-                AIProcessStep(icon: "lightbulb.fill", text: "Generating innovative ideas")
-                AIProcessStep(icon: "chart.line.uptrend.xyaxis", text: "Calculating viability scores")
-                AIProcessStep(icon: "star.fill", text: "Personalizing recommendations")
-            }
-            .padding(.horizontal, 40)
-        }
-        .frame(maxHeight: .infinity, alignment: .center)
-    }
-}
-
-struct AIProcessStep: View {
-    let icon: String
-    let text: String
+    @State private var rotation: Double = 0
     
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundColor(.orange)
-                .frame(width: 24)
-            Text(text)
-                .font(.system(size: 13))
-                .foregroundColor(.white.opacity(0.9))
+        ModernCard(padding: 40) {
+            VStack(spacing: 24) {
+                ZStack {
+                    Circle()
+                        .stroke(
+                            LinearGradient(
+                                colors: [AppColors.primaryOrange.opacity(0.3), AppColors.primaryPink.opacity(0.3)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 8
+                        )
+                        .frame(width: 80, height: 80)
+                    
+                    Circle()
+                        .trim(from: 0, to: 0.7)
+                        .stroke(
+                            AppColors.primaryGradient,
+                            style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                        )
+                        .frame(width: 80, height: 80)
+                        .rotationEffect(.degrees(rotation))
+                        .animation(
+                            Animation.linear(duration: 1.5)
+                                .repeatForever(autoreverses: false),
+                            value: rotation
+                        )
+                    
+                    Image(systemName: "brain.head.profile")
+                        .font(.title)
+                        .foregroundStyle(AppColors.primaryGradient)
+                }
+                
+                Text("AI is Thinking...")
+                    .font(.title2.bold())
+                
+                Text("Google Gemini is analyzing your profile and generating personalized business ideas tailored just for you")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+            }
+        }
+        .onAppear {
+            rotation = 360
         }
     }
 }
 
 struct ResultsStepView: View {
     @ObservedObject var viewModel: QuizViewModel
+    @State private var celebrate = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            VStack(spacing: 12) {
+        VStack(spacing: 24) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [AppColors.duolingoGreen.opacity(0.2), AppColors.successGreen.opacity(0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 120, height: 120)
+                
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 60))
-                    .foregroundColor(.green)
-                
-                Text("Profile Complete!")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.white)
-                
-                Text("Your personalized business dashboard is ready")
-                    .font(.system(size: 14))
-                    .foregroundColor(.white.opacity(0.7))
-                    .multilineTextAlignment(.center)
+                    .foregroundColor(AppColors.duolingoGreen)
+                    .scaleEffect(celebrate ? 1.2 : 1.0)
+                    .animation(AnimationHelpers.celebration, value: celebrate)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 20)
+            .bounceEntrance()
             
-            VStack(alignment: .leading, spacing: 16) {
-                FeatureItem(icon: "lightbulb.fill", title: "AI Business Ideas", description: "Get personalized recommendations")
-                FeatureItem(icon: "chart.line.uptrend.xyaxis", title: "Progress Tracking", description: "Track goals and milestones")
-                FeatureItem(icon: "sparkles", title: "AI Assistant", description: "Get guidance whenever you need")
-            }
-            .padding(16)
-            .background(Color.white.opacity(0.05))
-            .cornerRadius(12)
+            Text("Profile Complete!")
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .fadeInUp(delay: 0.2)
+            
+            Text("Your personalized business dashboard is ready")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .fadeInUp(delay: 0.3)
             
             if !viewModel.businessIdeas.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Top Recommendations")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
-                    
-                    VStack(spacing: 12) {
-                        ForEach(viewModel.businessIdeas.prefix(3)) { idea in
-                            IdeaCardCompact(idea: idea)
+                ModernCard(padding: 20) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Top Recommendations")
+                            .font(.headline)
+                        
+                        ForEach(Array(viewModel.businessIdeas.prefix(3).enumerated()), id: \.element.id) { index, idea in
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text(idea.title)
+                                        .font(.headline)
+                                    Spacer()
+                                    ColorfulBadge(idea.category, color: AppColors.primaryOrange)
+                                }
+                                
+                                Text(idea.description)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(2)
+                            }
+                            .padding(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color(.systemGray6))
+                            )
+                            .fadeInUp(delay: Double(index) * 0.1)
                         }
                     }
                 }
-                .padding(16)
-                .background(Color.white.opacity(0.05))
-                .cornerRadius(12)
+                .fadeInUp(delay: 0.4)
             }
+        }
+        .onAppear {
+            celebrate = true
+            HapticManager.shared.trigger(.success)
         }
     }
 }
 
-struct FeatureItem: View {
-    let icon: String
-    let title: String
-    let description: String
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 24))
-                .foregroundColor(Color(red: 1, green: 0.6, blue: 0.2))
-                .frame(width: 40)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-                
-                Text(description)
-                    .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.6))
-            }
-            
-            Spacer()
-        }
-    }
-}
-
-struct ToggleChip: View {
-    let label: String
+// MARK: - Selection Chip
+struct SelectionChip: View {
+    let text: String
     let isSelected: Bool
+    let color: Color
     let action: () -> Void
     
+    @State private var isPressed = false
+    
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            action()
+        }) {
             HStack {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 18))
-                Text(label)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.title3)
+                    .foregroundColor(isSelected ? color : .secondary)
+                
+                Text(text)
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .foregroundColor(isSelected ? .primary : .secondary)
+                
                 Spacer()
             }
-            .padding(14)
-            .background(isSelected ? Color(red: 1, green: 0.6, blue: 0.2).opacity(0.8) : Color.white.opacity(0.1))
-            .cornerRadius(12)
-            .foregroundColor(.white)
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(isSelected ? color.opacity(0.15) : Color(.systemGray6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(isSelected ? color : Color.clear, lineWidth: 2)
+                    )
+            )
         }
-    }
-}
-
-struct InfoBadge: View {
-    let text: String
-    
-    init(_ text: String) {
-        self.text = text
-    }
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(text)
-                .font(.system(size: 14, weight: .medium))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Color.white.opacity(0.1))
-        .cornerRadius(10)
-        .foregroundColor(.white)
-    }
-}
-
-struct IdeaCardCompact: View {
-    let idea: BusinessIdea
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(idea.title)
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
-            
-            Text(idea.description)
-                .font(.system(size: 13))
-                .foregroundColor(.white.opacity(0.7))
-                .lineLimit(2)
-            
-            HStack(spacing: 8) {
-                Badge(idea.category, color: .yellow)
-                Badge(idea.difficulty, color: .orange)
-            }
-        }
-        .padding(14)
-        .background(Color.white.opacity(0.1))
-        .cornerRadius(12)
-    }
-}
-
-struct Badge: View {
-    let text: String
-    let color: Color
-    
-    init(_ text: String, color: Color) {
-        self.text = text
-        self.color = color
-    }
-    
-    var body: some View {
-        Text(text)
-            .font(.system(size: 11, weight: .semibold))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(color.opacity(0.3))
-            .cornerRadius(6)
-            .foregroundColor(color)
+        .buttonStyle(.plain)
+        .scaleEffect(isPressed ? 0.95 : 1.0)
+        .animation(AnimationHelpers.buttonPress, value: isPressed)
+        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+            isPressed = pressing
+        }, perform: {})
     }
 }
 

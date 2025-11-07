@@ -96,7 +96,8 @@ class BusinessIdeaViewModel: ObservableObject {
     }
     
     func saveIdea(_ idea: BusinessIdea) {
-        FirebaseService.shared.saveBusinessIdea(idea) { [weak self] result in
+        guard let userId = userId else { return }
+        FirebaseService.shared.saveBusinessIdea(idea, userId: userId) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self else { return }
                 switch result {
@@ -155,7 +156,8 @@ class BusinessIdeaViewModel: ObservableObject {
     }
     
     func updateProgress(ideaId: String, progress: Int) {
-        FirebaseService.shared.updateBusinessIdeaProgress(ideaId, progress: progress) { [weak self] result in
+        guard let userId = userId else { return }
+        FirebaseService.shared.updateBusinessIdeaProgress(ideaId, progress: progress, userId: userId) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self else { return }
                 switch result {

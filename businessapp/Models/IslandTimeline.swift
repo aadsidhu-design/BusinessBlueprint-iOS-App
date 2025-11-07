@@ -12,6 +12,11 @@ struct Island: Identifiable, Codable {
     var type: IslandType
     var unlockedAt: Date?
     var completedAt: Date?
+    var order: Int?
+    var duration: String?
+    var keyTasks: [String]?
+    var successMetrics: [String]?
+    var emoji: String?
     
     init(
         id: String = UUID().uuidString,
@@ -22,7 +27,12 @@ struct Island: Identifiable, Codable {
         position: CGPoint,
         type: IslandType = .regular,
         unlockedAt: Date? = Date(),
-        completedAt: Date? = nil
+        completedAt: Date? = nil,
+        order: Int? = nil,
+        duration: String? = nil,
+        keyTasks: [String]? = nil,
+        successMetrics: [String]? = nil,
+        emoji: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -33,6 +43,11 @@ struct Island: Identifiable, Codable {
         self.type = type
         self.unlockedAt = unlockedAt
         self.completedAt = completedAt
+        self.order = order
+        self.duration = duration
+        self.keyTasks = keyTasks
+        self.successMetrics = successMetrics
+        self.emoji = emoji
     }
 }
 
@@ -137,5 +152,34 @@ struct JourneyProgress: Codable {
         self.completedIslandIds = completedIslandIds
         self.totalDistance = totalDistance
         self.lastUpdated = lastUpdated
+    }
+}
+
+// MARK: - AI Generated Timeline Island
+struct TimelineIsland: Identifiable, Codable {
+    let id: String
+    var title: String
+    var description: String
+    var duration: String
+    var keyTasks: [String]
+    var successMetrics: [String]
+    var emoji: String
+    
+    init(
+        id: String = UUID().uuidString,
+        title: String,
+        description: String,
+        duration: String,
+        keyTasks: [String],
+        successMetrics: [String],
+        emoji: String
+    ) {
+        self.id = id
+        self.title = title
+        self.description = description
+        self.duration = duration
+        self.keyTasks = keyTasks
+        self.successMetrics = successMetrics
+        self.emoji = emoji
     }
 }

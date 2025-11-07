@@ -5,6 +5,7 @@ struct BusinessIdea: Identifiable, Codable {
     let title: String
     let description: String
     let category: String
+    var industry: String { return category } // Alias for backward compatibility
     let difficulty: String // Easy, Medium, Hard
     let estimatedRevenue: String
     let timeToLaunch: String

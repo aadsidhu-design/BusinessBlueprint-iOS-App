@@ -8,6 +8,9 @@ struct IslandDetailView: View {
     
     @State private var showAddNote = false
     @State private var showAddReminder = false
+    @State private var showAISuggestions = false
+    @State private var isLoadingAI = false
+    @State private var aiSuggestions: String = ""
     @State private var noteText = ""
     @State private var reminderTitle = ""
     @State private var reminderMessage = ""
@@ -15,137 +18,347 @@ struct IslandDetailView: View {
     @State private var addToCalendar = false
     @Environment(\.dismiss) private var dismiss
     
+    private var notes: [ProgressNote] {
+        viewModel.getNotesFor(islandId: island.id)
+    }
+    
+    private var islandReminders: [AppReminder] {
+        viewModel.reminders.filter { $0.islandId == island.id }
+    }
+    
+    private var completionRate: Double {
+        let total = notes.count + islandReminders.count
+        guard total > 0 else { return 0 }
+        let completed = islandReminders.filter { $0.isCompleted }.count
+        return Double(completed + (island.isCompleted ? notes.count : 0)) / Double(total)
+    }
+    
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // Background
-                LinearGradient(
-                    colors: [island.type.color.opacity(0.3), island.type.color.opacity(0.1)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+        ZStack {
+            AppColors.backgroundGradient
                 .ignoresSafeArea()
-                
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Island Header
-                        IslandHeaderCard(island: island)
-                        
-                        // Notes Section
-                        NotesSection(
-                            notes: viewModel.getNotesFor(islandId: island.id),
-                            onAddNote: { showAddNote = true },
-                            onDeleteNote: { noteId in
-                                viewModel.deleteNote(id: noteId)
-                            }
-                        )
-                        
-                        // Reminders Section
-                        RemindersSection(
-                            reminders: viewModel.reminders.filter { $0.islandId == island.id },
-                            onAddReminder: { showAddReminder = true },
-                            onCompleteReminder: { reminderId in
-                                viewModel.completeReminder(id: reminderId)
-                            },
-                            onDeleteReminder: { reminderId in
-                                viewModel.deleteReminder(id: reminderId)
-                            }
-                        )
-                        
-                        // Complete Island Button
-                        if !island.isCompleted {
-                            Button {
-                                onComplete()
-                                dismiss()
-                            } label: {
-                                HStack {
-                                    Image(systemName: "flag.checkered")
-                                    Text("Complete Island")
-                                        .font(.headline)
+            
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Hero Card
+                    ModernCard(
+                        gradient: LinearGradient(
+                            colors: [island.type.color, island.type.color.opacity(0.7)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        padding: 24
+                    ) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack {
+                                Text(island.type.icon)
+                                    .font(.system(size: 50))
+                                
+                                Spacer()
+                                
+                                if island.isCompleted {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.white.opacity(0.25))
+                                            .frame(width: 50, height: 50)
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.white)
+                                            .font(.title2)
+                                    }
                                 }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(
-                                    LinearGradient(
-                                        colors: [.green, .blue],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
+                            }
+                            
+                            Text(island.title)
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
-                                .cornerRadius(16)
+                            
+                            Text(island.description)
+                                .font(.body)
+                                .foregroundColor(.white.opacity(0.9))
+                            
+                            if island.isCompleted, let completedDate = island.completedAt {
+                                HStack {
+                                    Image(systemName: "calendar")
+                                    Text("Completed \(completedDate.formatted(date: .abbreviated, time: .omitted))")
+                                }
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.8))
                             }
-                            .padding(.horizontal)
                         }
                     }
-                    .padding()
-                }
-            }
-            .navigationTitle(island.title)
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-            .sheet(isPresented: $showAddNote) {
-                AddNoteSheet(
-                    noteText: $noteText,
-                    onSave: {
-                        viewModel.addNote(content: noteText, islandId: island.id)
-                        noteText = ""
-                        showAddNote = false
-                    },
-                    onCancel: {
-                        noteText = ""
-                        showAddNote = false
-                    }
-                )
-            }
-            .sheet(isPresented: $showAddReminder) {
-                AddReminderSheet(
-                    title: $reminderTitle,
-                    message: $reminderMessage,
-                    date: $reminderDate,
-                    addToCalendar: $addToCalendar,
-                    onSave: {
-                        viewModel.addReminder(
-                            title: reminderTitle,
-                            message: reminderMessage,
-                            scheduledDate: reminderDate,
-                            islandId: island.id,
-                            addToCalendar: addToCalendar
-                        )
-                        
-                        // Add to system calendar if requested
-                        if addToCalendar {
-                            requestCalendarAccess { granted in
-                                if granted {
-                                    addEventToCalendar(
-                                        title: reminderTitle,
-                                        notes: reminderMessage,
-                                        startDate: reminderDate
-                                    )
+                    .fadeInUp()
+                    
+                    // Progress Card
+                    if completionRate > 0 {
+                        ModernCard(padding: 20) {
+                            VStack(alignment: .leading, spacing: 16) {
+                                HStack {
+                                    Text("Progress")
+                                        .font(.headline)
+                                    Spacer()
+                                    Text("\(Int(completionRate * 100))%")
+                                        .font(.headline.bold())
+                                        .foregroundColor(AppColors.primaryOrange)
+                                }
+                                
+                                ProgressView(value: completionRate)
+                                    .tint(AppColors.primaryOrange)
+                                    .scaleEffect(y: 2)
+                                
+                                HStack {
+                                    Label("\(notes.count) notes", systemImage: "note.text")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Label("\(islandReminders.filter { $0.isCompleted }.count)/\(islandReminders.count) reminders", systemImage: "bell.fill")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                 }
                             }
                         }
-                        
-                        reminderTitle = ""
-                        reminderMessage = ""
-                        reminderDate = Date()
-                        addToCalendar = false
-                        showAddReminder = false
-                    },
-                    onCancel: {
-                        reminderTitle = ""
-                        reminderMessage = ""
-                        reminderDate = Date()
-                        addToCalendar = false
-                        showAddReminder = false
+                        .fadeInUp(delay: 0.1)
                     }
-                )
+                    
+                    // Notes Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Notes")
+                                .font(.headline)
+                            Spacer()
+                            Button {
+                                showAddNote = true
+                            } label: {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(AppColors.primaryOrange)
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        
+                        if notes.isEmpty {
+                            ModernCard(padding: 40) {
+                                VStack(spacing: 12) {
+                                    Image(systemName: "note.text")
+                                        .font(.system(size: 40))
+                                        .foregroundColor(.secondary)
+                                    Text("No notes yet")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding(.horizontal, 24)
+                        } else {
+                            ForEach(notes) { note in
+                                ModernCard(padding: 16) {
+                                    NoteCardRow(note: note) {
+                                        viewModel.deleteNote(id: note.id)
+                                    }
+                                }
+                                .padding(.horizontal, 24)
+                            }
+                        }
+                    }
+                    .fadeInUp(delay: 0.2)
+                    
+                    // Reminders Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Reminders")
+                                .font(.headline)
+                            Spacer()
+                            Button {
+                                showAddReminder = true
+                            } label: {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(AppColors.primaryOrange)
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        
+                        if islandReminders.isEmpty {
+                            ModernCard(padding: 40) {
+                                VStack(spacing: 12) {
+                                    Image(systemName: "bell.slash")
+                                        .font(.system(size: 40))
+                                        .foregroundColor(.secondary)
+                                    Text("No reminders yet")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding(.horizontal, 24)
+                        } else {
+                            ForEach(islandReminders) { reminder in
+                                ModernCard(padding: 16) {
+                                    ReminderCardRow(
+                                        reminder: reminder,
+                                        onToggle: {
+                                            viewModel.completeReminder(id: reminder.id)
+                                        },
+                                        onDelete: {
+                                            viewModel.deleteReminder(id: reminder.id)
+                                        }
+                                    )
+                                }
+                                .padding(.horizontal, 24)
+                            }
+                        }
+                    }
+                    .fadeInUp(delay: 0.3)
+                    
+                    // AI Suggestions
+                    ModernCard(
+                        borderColor: AppColors.primaryPink.opacity(0.5),
+                        padding: 20
+                    ) {
+                        Button {
+                            fetchAISuggestions()
+                        } label: {
+                            HStack {
+                                ZStack {
+                                    Circle()
+                                        .fill(AppColors.primaryPink.opacity(0.15))
+                                        .frame(width: 50, height: 50)
+                                    
+                                    if isLoadingAI {
+                                        ProgressView()
+                                            .tint(AppColors.primaryPink)
+                                    } else {
+                                        Image(systemName: "sparkles")
+                                            .font(.title3)
+                                            .foregroundColor(AppColors.primaryPink)
+                                    }
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(isLoadingAI ? "Getting suggestions..." : "Get AI Suggestions")
+                                        .font(.headline)
+                                    Text("Personalized guidance")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isLoadingAI)
+                    }
+                    .padding(.horizontal, 24)
+                    .fadeInUp(delay: 0.4)
+                    
+                    // Complete Button
+                    if !island.isCompleted {
+                        PlayfulButton(
+                            title: "Complete Island",
+                            icon: "checkmark.circle.fill",
+                            gradient: AppColors.successGradient
+                        ) {
+                            HapticManager.shared.trigger(.success)
+                            onComplete()
+                            dismiss()
+                        }
+                        .padding(.horizontal, 24)
+                        .fadeInUp(delay: 0.5)
+                    }
+                    
+                    Spacer()
+                        .frame(height: 40)
+                }
+                .padding(.vertical, 16)
+            }
+        }
+        .navigationTitle(island.title)
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Done") {
+                    dismiss()
+                }
+            }
+        }
+        .sheet(isPresented: $showAddNote) {
+            AddNoteSheet(
+                noteText: $noteText,
+                onSave: {
+                    viewModel.addNote(content: noteText, islandId: island.id)
+                    noteText = ""
+                    showAddNote = false
+                },
+                onCancel: {
+                    noteText = ""
+                    showAddNote = false
+                }
+            )
+        }
+        .sheet(isPresented: $showAddReminder) {
+            AddReminderSheet(
+                title: $reminderTitle,
+                message: $reminderMessage,
+                date: $reminderDate,
+                addToCalendar: $addToCalendar,
+                onSave: {
+                    viewModel.addReminder(
+                        title: reminderTitle,
+                        message: reminderMessage,
+                        scheduledDate: reminderDate,
+                        islandId: island.id,
+                        addToCalendar: addToCalendar
+                    )
+                    
+                    if addToCalendar {
+                        requestCalendarAccess { granted in
+                            if granted {
+                                addEventToCalendar(
+                                    title: reminderTitle,
+                                    notes: reminderMessage,
+                                    startDate: reminderDate
+                                )
+                            }
+                        }
+                    }
+                    
+                    reminderTitle = ""
+                    reminderMessage = ""
+                    reminderDate = Date()
+                    addToCalendar = false
+                    showAddReminder = false
+                },
+                onCancel: {
+                    reminderTitle = ""
+                    reminderMessage = ""
+                    reminderDate = Date()
+                    addToCalendar = false
+                    showAddReminder = false
+                }
+            )
+        }
+        .sheet(isPresented: $showAISuggestions) {
+            AISuggestionsSheet(suggestions: aiSuggestions)
+        }
+    }
+    
+    // MARK: - AI Suggestions
+    private func fetchAISuggestions() {
+        guard !isLoadingAI else { return }
+        
+        guard !Config.googleAIKey.isEmpty else {
+            aiSuggestions = "⚠️ AI is not configured. Please set up your Google AI API key in the app settings to use AI features."
+            showAISuggestions = true
+            return
+        }
+        
+        isLoadingAI = true
+        HapticManager.shared.trigger(.light)
+        
+        viewModel.askAIAboutProgress(question: "Give me specific actionable suggestions for this island") { response in
+            DispatchQueue.main.async {
+                self.aiSuggestions = response
+                self.isLoadingAI = false
+                self.showAISuggestions = true
+                HapticManager.shared.trigger(.success)
             }
         }
     }
@@ -176,118 +389,32 @@ struct IslandDetailView: View {
         event.title = title
         event.notes = notes
         event.startDate = startDate
-        event.endDate = startDate.addingTimeInterval(3600) // 1 hour duration
+        event.endDate = startDate.addingTimeInterval(3600)
         event.calendar = eventStore.defaultCalendarForNewEvents
         
-        // Add alarm 15 minutes before
-        let alarm = EKAlarm(relativeOffset: -900) // 15 minutes
+        let alarm = EKAlarm(relativeOffset: -900)
         event.addAlarm(alarm)
         
         do {
             try eventStore.save(event, span: .thisEvent)
         } catch {
-            print("Error saving event to calendar: \(error)")
+            print("Error saving event to calendar: \(error.localizedDescription)")
         }
     }
 }
 
-// MARK: - Island Header Card
-struct IslandHeaderCard: View {
-    let island: Island
-    
-    var body: some View {
-        VStack(spacing: 16) {
-            Text(island.type.icon)
-                .font(.system(size: 80))
-            
-            Text(island.title)
-                .font(.system(size: 28, weight: .bold))
-            
-            Text(island.description)
-                .font(.system(size: 16))
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-            
-            if island.isCompleted, let completedDate = island.completedAt {
-                HStack {
-                    Image(systemName: "checkmark.seal.fill")
-                        .foregroundColor(.green)
-                    Text("Completed \(completedDate.formatted(date: .abbreviated, time: .omitted))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding(8)
-                .background(Color.green.opacity(0.1))
-                .cornerRadius(8)
-            }
-        }
-        .padding()
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.ultraThinMaterial)
-        )
-    }
-}
-
-// MARK: - Notes Section
-struct NotesSection: View {
-    let notes: [ProgressNote]
-    let onAddNote: () -> Void
-    let onDeleteNote: (String) -> Void
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Label("Notes", systemImage: "note.text")
-                    .font(.headline)
-                
-                Spacer()
-                
-                Button {
-                    onAddNote()
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.blue)
-                }
-            }
-            
-            if notes.isEmpty {
-                Text("No notes yet. Add one to track your progress!")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.gray.opacity(0.1))
-                    .cornerRadius(12)
-            } else {
-                ForEach(notes) { note in
-                    NoteCard(note: note, onDelete: {
-                        onDeleteNote(note.id)
-                    })
-                }
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.ultraThinMaterial)
-        )
-    }
-}
-
-// MARK: - Note Card
-struct NoteCard: View {
+// MARK: - Note Card Row
+private struct NoteCardRow: View {
     let note: ProgressNote
     let onDelete: () -> Void
     
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "note")
-                .foregroundColor(.blue)
+            Image(systemName: "note.text")
+                .foregroundColor(AppColors.primaryOrange)
+                .font(.title3)
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(note.content)
                     .font(.body)
                 
@@ -300,161 +427,122 @@ struct NoteCard: View {
             
             Button {
                 onDelete()
+                HapticManager.shared.trigger(.light)
             } label: {
                 Image(systemName: "trash")
                     .foregroundColor(.red)
             }
         }
-        .padding()
-        .background(Color.blue.opacity(0.1))
-        .cornerRadius(12)
     }
 }
 
-// MARK: - Reminders Section
-struct RemindersSection: View {
-    let reminders: [AppReminder]
-    let onAddReminder: () -> Void
-    let onCompleteReminder: (String) -> Void
-    let onDeleteReminder: (String) -> Void
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Label("Reminders", systemImage: "bell.fill")
-                    .font(.headline)
-                
-                Spacer()
-                
-                Button {
-                    onAddReminder()
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.orange)
-                }
-            }
-            
-            if reminders.isEmpty {
-                Text("No reminders set. Add one to stay on track!")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.gray.opacity(0.1))
-                    .cornerRadius(12)
-            } else {
-                ForEach(reminders) { reminder in
-                    ReminderCard(
-                        reminder: reminder,
-                        onComplete: {
-                            onCompleteReminder(reminder.id)
-                        },
-                        onDelete: {
-                            onDeleteReminder(reminder.id)
-                        }
-                    )
-                }
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.ultraThinMaterial)
-        )
-    }
-}
-
-// MARK: - Reminder Card
-struct ReminderCard: View {
+// MARK: - Reminder Card Row
+private struct ReminderCardRow: View {
     let reminder: AppReminder
-    let onComplete: () -> Void
+    let onToggle: () -> Void
     let onDelete: () -> Void
     
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(spacing: 16) {
             Button {
-                onComplete()
+                onToggle()
+                HapticManager.shared.trigger(.light)
             } label: {
                 Image(systemName: reminder.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(reminder.isCompleted ? .green : .orange)
+                    .foregroundColor(reminder.isCompleted ? AppColors.duolingoGreen : AppColors.primaryOrange)
+                    .font(.title3)
             }
+            .buttonStyle(.plain)
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(reminder.title)
-                    .font(.body)
+                    .font(.headline)
                     .strikethrough(reminder.isCompleted)
+                    .foregroundColor(reminder.isCompleted ? .secondary : .primary)
                 
-                Text(reminder.message)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                if !reminder.message.isEmpty {
+                    Text(reminder.message)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
                 
-                HStack(spacing: 4) {
-                    Image(systemName: "calendar")
+                HStack(spacing: 8) {
+                    Label(reminder.scheduledDate.formatted(date: .abbreviated, time: .shortened), systemImage: "clock")
                         .font(.caption2)
-                    Text(reminder.scheduledDate.formatted(date: .abbreviated, time: .shortened))
-                        .font(.caption2)
+                        .foregroundColor(.secondary)
                     
                     if reminder.notifyViaCalendar {
-                        Image(systemName: "calendar.badge.plus")
+                        Image(systemName: "calendar")
                             .font(.caption2)
-                            .foregroundColor(.blue)
+                            .foregroundColor(AppColors.brightBlue)
                     }
                 }
-                .foregroundColor(.secondary)
             }
             
             Spacer()
             
             Button {
                 onDelete()
+                HapticManager.shared.trigger(.light)
             } label: {
                 Image(systemName: "trash")
                     .foregroundColor(.red)
             }
         }
-        .padding()
-        .background(reminder.isCompleted ? Color.gray.opacity(0.1) : Color.orange.opacity(0.1))
-        .cornerRadius(12)
     }
 }
 
 // MARK: - Add Note Sheet
-struct AddNoteSheet: View {
+private struct AddNoteSheet: View {
     @Binding var noteText: String
     let onSave: () -> Void
     let onCancel: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var isFocused: Bool
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                TextEditor(text: $noteText)
-                    .frame(minHeight: 200)
-                    .padding()
-                    .background(Color.gray.opacity(0.1))
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.blue, lineWidth: 2)
-                    )
+            ZStack {
+                AppColors.backgroundGradient
+                    .ignoresSafeArea()
                 
-                Spacer()
+                VStack(spacing: 20) {
+                    ModernTextField(
+                        title: "",
+                        text: $noteText,
+                        placeholder: "Add a note...",
+                        icon: "note.text"
+                    )
+                    .padding(24)
+                    
+                    Spacer()
+                }
             }
-            .padding()
-            .navigationTitle("Add Note")
+            .navigationTitle("New Note")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         onCancel()
                     }
                 }
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                ToolbarItem(placement: .confirmationAction) {
+                    PlayfulButton(
+                        title: "Save",
+                        icon: "checkmark.circle.fill",
+                        gradient: AppColors.successGradient,
+                        disabled: noteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ) {
                         onSave()
                     }
-                    .disabled(noteText.isEmpty)
+                    .frame(width: 80)
+                }
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    isFocused = true
                 }
             }
         }
@@ -462,55 +550,111 @@ struct AddNoteSheet: View {
 }
 
 // MARK: - Add Reminder Sheet
-struct AddReminderSheet: View {
+private struct AddReminderSheet: View {
     @Binding var title: String
     @Binding var message: String
     @Binding var date: Date
     @Binding var addToCalendar: Bool
     let onSave: () -> Void
     let onCancel: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var titleFocused: Bool
     
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Reminder Details") {
-                    TextField("Title", text: $title)
-                    TextField("Message", text: $message, axis: .vertical)
-                        .lineLimit(3...6)
-                }
+            ZStack {
+                AppColors.backgroundGradient
+                    .ignoresSafeArea()
                 
-                Section("Schedule") {
-                    DatePicker("Date & Time", selection: $date, in: Date()...)
-                    
-                    Toggle("Add to Calendar", isOn: $addToCalendar)
-                }
-                
-                if addToCalendar {
-                    Section {
-                        HStack {
-                            Image(systemName: "info.circle")
-                                .foregroundColor(.blue)
-                            Text("This will create an event in your device calendar with a 15-minute reminder.")
-                                .font(.caption)
+                ScrollView {
+                    VStack(spacing: 20) {
+                        ModernTextField(
+                            title: "Title",
+                            text: $title,
+                            placeholder: "Enter reminder title",
+                            icon: "bell.fill"
+                        )
+                        
+                        ModernTextField(
+                            title: "Message",
+                            text: $message,
+                            placeholder: "Optional message",
+                            icon: "note.text"
+                        )
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Date & Time")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
                                 .foregroundColor(.secondary)
+                            
+                            DatePicker("", selection: $date, in: Date()...)
+                                .datePickerStyle(.compact)
                         }
+                        
+                        Toggle("Add to Calendar", isOn: $addToCalendar)
+                            .tint(AppColors.primaryOrange)
                     }
+                    .padding(24)
                 }
             }
             .navigationTitle("New Reminder")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         onCancel()
                     }
                 }
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                ToolbarItem(placement: .confirmationAction) {
+                    PlayfulButton(
+                        title: "Save",
+                        icon: "checkmark.circle.fill",
+                        gradient: AppColors.successGradient,
+                        disabled: title.isEmpty
+                    ) {
                         onSave()
                     }
-                    .disabled(title.isEmpty)
+                    .frame(width: 80)
+                }
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    titleFocused = true
+                }
+            }
+        }
+    }
+}
+
+// MARK: - AI Suggestions Sheet
+private struct AISuggestionsSheet: View {
+    let suggestions: String
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppColors.backgroundGradient
+                    .ignoresSafeArea()
+                
+                ScrollView {
+                    ModernCard(padding: 24) {
+                        Text(suggestions)
+                            .font(.body)
+                            .lineSpacing(6)
+                    }
+                    .padding(24)
+                }
+            }
+            .navigationTitle("AI Suggestions")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
                 }
             }
         }
@@ -518,14 +662,16 @@ struct AddReminderSheet: View {
 }
 
 #Preview {
-    IslandDetailView(
-        island: Island(
-            title: "Launch",
-            description: "Launch your business!",
-            position: CGPoint(x: 100, y: 100),
-            type: .milestone
-        ),
-        viewModel: IslandTimelineViewModel(),
-        onComplete: {}
-    )
+    NavigationStack {
+        IslandDetailView(
+            island: Island(
+                title: "Launch",
+                description: "Launch your business!",
+                position: CGPoint(x: 100, y: 100),
+                type: .milestone
+            ),
+            viewModel: IslandTimelineViewModel(),
+            onComplete: {}
+        )
+    }
 }

@@ -7,48 +7,144 @@ struct IslandTimelineView: View {
     @State private var showAIChat = false
     
     var body: some View {
-        ZStack(alignment: .top) {
-            TimelineBackgroundView()
+        ZStack {
+            AppColors.backgroundGradient
                 .ignoresSafeArea()
             
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 32) {
-                    TimelineHeaderView(
-                        journeyName: currentJourneyTitle,
-                        currentStageTitle: currentStageTitle,
-                        completionRate: completionRate,
-                        onOpenCurrent: openCurrentStage,
-                        onChat: { showAIChat = true }
-                    )
-                    .padding(.top, 16)
-                    
-                    let stages = stageMetadata()
-                    ForEach(Array(stages.enumerated()), id: \.element.id) { index, metadata in
-                        TimelineItemView(
-                            metadata: metadata,
-                            previousStatus: index > 0 ? stages[index - 1].status : nil,
-                            isLast: index == stages.count - 1,
-                            onTap: {
-                                selectedIsland = metadata.island
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Header Card
+                    ModernCard(
+                        gradient: AppColors.vibrantGradient,
+                        padding: 24
+                    ) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text(currentJourneyTitle)
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                            
+                            Text(currentStageTitle)
+                                .font(.headline)
+                                .foregroundColor(.white.opacity(0.9))
+                            
+                            if completionRate > 0 {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Text("Progress")
+                                            .font(.caption)
+                                            .foregroundColor(.white.opacity(0.8))
+                                        Spacer()
+                                        Text("\(Int(completionRate * 100))%")
+                                            .font(.caption.bold())
+                                            .foregroundColor(.white)
+                                    }
+                                    ProgressView(value: completionRate)
+                                        .tint(.white)
+                                        .scaleEffect(y: 2)
+                                }
                             }
-                        )
+                        }
+                    }
+                    .fadeInUp()
+                    
+                    // Islands Timeline
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Journey Stages")
+                            .font(.headline)
+                            .padding(.horizontal, 24)
+                        
+                            ForEach(Array(viewModel.islands.enumerated()), id: \.element.id) { index, island in
+                            IslandCardRow(
+                                        island: island,
+                                        index: index,
+                                isCurrent: index == viewModel.currentIslandIndex,
+                                isCompleted: island.isCompleted || viewModel.journeyProgress.completedIslandIds.contains(island.id),
+                                isLocked: index > viewModel.currentIslandIndex
+                            ) {
+                                if !isLocked(index) {
+                                            selectedIsland = island
+                                }
+                            }
+                            .padding(.horizontal, 24)
+                            .fadeInUp(delay: Double(index) * 0.1)
+                        }
                     }
                     
-                    Spacer(minLength: 80)
+                    // Progress Summary
+                    if !viewModel.islands.isEmpty {
+                        ModernCard(padding: 20) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Completed")
+                                        .font(.headline)
+                                    Text("\(completedCount) of \(viewModel.islands.count) stages")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                AnimatedProgressRing(
+                                    progress: completionRate,
+                                    gradient: AppColors.successGradient,
+                                    size: 60
+                                )
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        .fadeInUp()
+                    }
+                    
+                    // AI Assistant Button
+                    ModernCard(
+                        borderColor: AppColors.primaryOrange.opacity(0.5),
+                        padding: 20
+                    ) {
+                        Button {
+                            showAIChat = true
+                            HapticManager.shared.trigger(.light)
+                        } label: {
+                            HStack {
+                                ZStack {
+                                    Circle()
+                                        .fill(AppColors.primaryOrange.opacity(0.15))
+                                        .frame(width: 50, height: 50)
+                                    
+                                    Image(systemName: "message.fill")
+                                        .font(.title3)
+                                        .foregroundColor(AppColors.primaryOrange)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Ask AI Guide")
+                                        .font(.headline)
+                                    Text("Get personalized help")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 24)
+                    .fadeInUp()
+                    
+                    Spacer()
+                        .frame(height: 40)
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 160)
+                .padding(.vertical, 16)
             }
-            
-            VStack {
-                Spacer()
-                JourneySummaryCard(
-                    completed: completedCount,
-                    total: max(viewModel.islands.count, 1)
-                )
-                .padding(.horizontal, 24)
-                .padding(.bottom, 24)
-            }
+        }
+        .navigationTitle("Journey")
+        .navigationBarTitleDisplayMode(.large)
+        .onAppear {
+            setupTimeline()
+            viewModel.connectToStore(businessPlanStore)
         }
         .sheet(item: $selectedIsland) { island in
             IslandDetailView(
@@ -62,36 +158,29 @@ struct IslandTimelineView: View {
         }
         .sheet(isPresented: $showAIChat) {
             AIProgressAssistantView(viewModel: viewModel)
-        }
-        .onAppear {
-            setupTimeline()
-            viewModel.connectToStore(businessPlanStore)
-        }
     }
 }
 
-// MARK: - Computed Helpers
-private extension IslandTimelineView {
-    var currentJourneyTitle: String {
+    private var currentJourneyTitle: String {
         if let idea = businessPlanStore.selectedBusinessIdea {
             return idea.title
         }
         return "Your Business Journey"
     }
     
-    var currentStageTitle: String {
+    private var currentStageTitle: String {
         if let stage = viewModel.islands[safe: viewModel.currentIslandIndex] {
             return stage.title
         }
         return viewModel.islands.first?.title ?? "Getting Started"
     }
     
-    var completionRate: Double {
+    private var completionRate: Double {
         guard !viewModel.islands.isEmpty else { return 0 }
         return Double(completedCount) / Double(viewModel.islands.count)
     }
     
-    var completedCount: Int {
+    private var completedCount: Int {
         if !viewModel.journeyProgress.completedIslandIds.isEmpty {
             return viewModel.journeyProgress.completedIslandIds.count
         }
@@ -101,42 +190,11 @@ private extension IslandTimelineView {
         return completedByIndex.count
     }
     
-    func stageMetadata() -> [StageMetadata] {
-        viewModel.islands.enumerated().map { index, island in
-            let status = status(for: index, island: island)
-            return StageMetadata(
-                island: island,
-                index: index,
-                status: status,
-                alignment: alignment(for: index)
-            )
-        }
+    private func isLocked(_ index: Int) -> Bool {
+        index > viewModel.currentIslandIndex
     }
     
-    func status(for index: Int, island: Island) -> StageStatus {
-        if island.isCompleted || viewModel.journeyProgress.completedIslandIds.contains(island.id) {
-            return .completed
-        }
-        if index == viewModel.currentIslandIndex {
-            return .current
-        }
-        if index < viewModel.currentIslandIndex {
-            return .completed
-        }
-        return .locked
-    }
-    
-    func alignment(for index: Int) -> StageAlignment {
-        if index == 0 { return .center }
-        return index.isMultiple(of: 2) ? .right : .left
-    }
-    
-    func openCurrentStage() {
-        guard let current = viewModel.islands[safe: viewModel.currentIslandIndex] else { return }
-        selectedIsland = current
-    }
-    
-    func setupTimeline() {
+    private func setupTimeline() {
         if let idea = businessPlanStore.selectedBusinessIdea {
             viewModel.syncWithDashboard(businessIdea: idea)
         } else if let firstIdea = businessPlanStore.businessIdeas.first {
@@ -146,7 +204,6 @@ private extension IslandTimelineView {
     }
 }
 
-// MARK: - Safe Array Indexing
 private extension Array {
     subscript(safe index: Int) -> Element? {
         guard indices.contains(index) else { return nil }
@@ -154,361 +211,146 @@ private extension Array {
     }
 }
 
-// MARK: - Supporting Types
-private struct StageMetadata: Identifiable {
+private struct IslandCardRow: View {
     let island: Island
     let index: Int
-    let status: StageStatus
-    let alignment: StageAlignment
-    
-    var id: String { island.id }
-}
-
-private enum StageStatus {
-    case locked
-    case current
-    case completed
-}
-
-private enum StageAlignment {
-    case left
-    case center
-    case right
-}
-
-// MARK: - Background
-private struct TimelineBackgroundView: View {
-    var body: some View {
-        LinearGradient(
-            colors: [
-                Color(red: 0.91, green: 0.98, blue: 0.93),
-                Color(red: 0.85, green: 0.96, blue: 0.92),
-                Color(red: 0.95, green: 0.97, blue: 0.99)
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .overlay(
-            VStack(spacing: 40) {
-                ForEach(0..<6, id: \.self) { index in
-                    Capsule()
-                        .fill(Color.white.opacity(0.4))
-                        .frame(width: CGFloat.random(in: 40...120), height: 14)
-                        .blur(radius: 30)
-                        .opacity(0.2)
-                        .offset(x: index.isMultiple(of: 2) ? -140 : 140)
-                }
-            }
-        )
-    }
-}
-
-// MARK: - Header
-private struct TimelineHeaderView: View {
-    let journeyName: String
-    let currentStageTitle: String
-    let completionRate: Double
-    let onOpenCurrent: () -> Void
-    let onChat: () -> Void
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(journeyName.uppercased())
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.green.opacity(0.7))
-                    Text(currentStageTitle)
-                        .font(.title2)
-                        .fontWeight(.heavy)
-                        .foregroundStyle(Color.primary)
-                        .lineLimit(2)
-                    Text("Stay on your streak! \(Int(completionRate * 100))% complete")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.secondary)
-                }
-                Spacer()
-                Button(action: onChat) {
-                    Image(systemName: "bubble.left.and.exclamationmark.fill")
-                        .font(.title3)
-                        .foregroundStyle(.white)
-                        .padding(14)
-                        .background(Circle().fill(Color.green.opacity(0.7)))
-                        .shadow(color: Color.green.opacity(0.4), radius: 12, x: 0, y: 6)
-                }
-                .buttonStyle(.plain)
-            }
-            
-            ProgressView(value: completionRate)
-                .tint(Color.green)
-                .shadow(color: Color.green.opacity(0.3), radius: 6, x: 0, y: 3)
-            
-            Button(action: onOpenCurrent) {
-                HStack {
-                    Text("Continue")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    Spacer()
-                    Image(systemName: "arrowtriangle.right.fill")
-                        .font(.headline)
-                }
-                .foregroundStyle(.white)
-                .padding(.vertical, 14)
-                .padding(.horizontal, 18)
-                .background(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(Color.green)
-                )
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(24)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 14)
-        )
-    }
-}
-
-// MARK: - Timeline Item
-private struct TimelineItemView: View {
-    let metadata: StageMetadata
-    let previousStatus: StageStatus?
-    let isLast: Bool
+    let isCurrent: Bool
+    let isCompleted: Bool
+    let isLocked: Bool
     let onTap: () -> Void
     
-    var body: some View {
-        VStack(spacing: 0) {
-            if let previousStatus {
-                TimelineConnector(color: connectorColor(for: previousStatus))
-                    .frame(width: 12, height: 46)
-                    .frame(maxWidth: .infinity)
-            } else {
-                Spacer(minLength: 12)
-            }
-            
-            HStack(alignment: .top) {
-                if metadata.alignment == .left {
-                    stageBadge
-                    Spacer(minLength: 48)
-                } else if metadata.alignment == .right {
-                    Spacer(minLength: 48)
-                    stageBadge
-                } else {
-                    Spacer()
-                    stageBadge
-                    Spacer()
-                }
-            }
-            .frame(maxWidth: .infinity)
-            
-            if !isLast {
-                TimelineConnector(color: connectorColor(for: metadata.status))
-                    .frame(width: 12, height: 46)
-                    .frame(maxWidth: .infinity)
-            } else {
-                Spacer(minLength: 8)
-            }
-        }
-        .animation(.easeInOut(duration: 0.3), value: metadata.status)
-    }
-    
-    private var stageBadge: some View {
-        TimelineStageBadge(
-            island: metadata.island,
-            status: metadata.status,
-            alignment: metadata.alignment,
-            action: onTap
-        )
-    }
-    
-    private func connectorColor(for status: StageStatus) -> Color {
-        switch status {
-        case .completed:
-            return Color.green.opacity(0.8)
-        case .current:
-            return Color.green.opacity(0.6)
-        case .locked:
-            return Color.gray.opacity(0.3)
-        }
-    }
-}
-
-// MARK: - Timeline Stage Badge
-private struct TimelineStageBadge: View {
-    let island: Island
-    let status: StageStatus
-    let alignment: StageAlignment
-    let action: () -> Void
-    
-    @State private var bounce = false
+    @State private var isPressed = false
+    @State private var pulse = false
     
     var body: some View {
-        Button(action: action) {
-            VStack(spacing: 12) {
-                ZStack {
+        Button {
+            onTap()
+            HapticManager.shared.trigger(.light)
+        } label: {
+            ModernCard(
+                borderColor: borderColor.opacity(0.5),
+                padding: 20
+            ) {
+                HStack(spacing: 16) {
+                    // Status Icon
+            ZStack {
+                        Circle()
+                            .fill(statusColor)
+                            .frame(width: 56, height: 56)
+                            .overlay(
                     Circle()
-                        .fill(backgroundGradient)
-                        .frame(width: 88, height: 88)
-                        .shadow(color: shadowColor, radius: status == .locked ? 3 : 12, x: 0, y: 8)
-                    Circle()
-                        .strokeBorder(borderGradient, lineWidth: 4)
-                        .frame(width: 88, height: 88)
-                    Image(systemName: iconName)
-                        .font(.system(size: 36, weight: .semibold))
-                        .foregroundStyle(iconColor)
-                        .scaleEffect(status == .current && bounce ? 1.08 : 1.0)
+                                    .stroke(Color.white, lineWidth: 3)
+                            )
+                            .scaleEffect(isCurrent && !isCompleted ? (pulse ? 1.1 : 1.0) : 1.0)
                         .animation(
-                            .easeInOut(duration: 0.9).repeatForever(autoreverses: true),
-                            value: bounce
-                        )
+                                isCurrent && !isCompleted
+                                    ? Animation.easeInOut(duration: 1.5).repeatForever(autoreverses: true)
+                                    : .default,
+                                value: pulse
+                            )
+                        
+                        if isLocked {
+                            Image(systemName: "lock.fill")
+                                .foregroundColor(.white)
+                                .font(.title3)
+                        } else if isCompleted {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.white)
+                                .font(.title3)
+                                .fontWeight(.bold)
+                        } else {
+                            Text(island.type.icon)
+                                .font(.title2)
+                        }
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text(island.title)
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            if isCurrent {
+                                ColorfulBadge("Current", icon: "arrow.right.circle.fill", color: AppColors.primaryOrange)
+                            }
+                        }
+                        
+                        Text(island.description)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
+                        
+                        HStack {
+                            Text("Stage \(index + 1)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            
+                            if isCompleted {
+                            Spacer()
+                                HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                                        .font(.caption2)
+                                    Text("Completed")
+                                        .font(.caption2)
+                                        .fontWeight(.semibold)
+                                }
+                                .foregroundColor(AppColors.duolingoGreen)
+                            }
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    if !isLocked {
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
-                
-                Text(island.title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(textColor)
-                    .multilineTextAlignment(textAlignment)
-                    .lineLimit(2)
-                    .frame(maxWidth: 160)
             }
         }
         .buttonStyle(.plain)
-        .disabled(status == .locked)
+        .disabled(isLocked)
+        .scaleEffect(isPressed ? 0.98 : 1.0)
+        .animation(AnimationHelpers.cardTap, value: isPressed)
+        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+            isPressed = pressing
+        }, perform: {})
         .onAppear {
-            if status == .current { bounce = true }
+            if isCurrent && !isCompleted {
+                pulse = true
+            }
         }
     }
     
-    private var backgroundGradient: LinearGradient {
-        switch status {
-        case .completed:
-            return LinearGradient(colors: [Color(red: 0.34, green: 0.73, blue: 0.38), Color(red: 0.23, green: 0.62, blue: 0.29)], startPoint: .topLeading, endPoint: .bottomTrailing)
-        case .current:
-            return LinearGradient(colors: [Color(red: 0.56, green: 0.86, blue: 0.42), Color(red: 0.27, green: 0.7, blue: 0.33)], startPoint: .top, endPoint: .bottom)
-        case .locked:
-            return LinearGradient(colors: [Color(red: 0.82, green: 0.83, blue: 0.85), Color(red: 0.76, green: 0.77, blue: 0.79)], startPoint: .topLeading, endPoint: .bottomTrailing)
+    private var statusColor: Color {
+        if isLocked {
+            return .gray
+        } else if isCompleted {
+            return AppColors.duolingoGreen
+        } else if isCurrent {
+            return AppColors.primaryOrange
+        } else {
+            return island.type.color
         }
     }
     
-    private var borderGradient: LinearGradient {
-        switch status {
-        case .completed:
-            return LinearGradient(colors: [Color.white.opacity(0.6), Color.white.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
-        case .current:
-            return LinearGradient(colors: [Color.white.opacity(0.9), Color.white.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing)
-        case .locked:
-            return LinearGradient(colors: [Color.white.opacity(0.4), Color.white.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing)
-        }
-    }
-    
-    private var iconName: String {
-        switch island.type {
-        case .start:
-            return "star.fill"
-        case .milestone:
-            return "flag.fill"
-        case .treasure:
-            return "gift.fill"
-        case .regular:
-            return "book.fill"
-        }
-    }
-    
-    private var iconColor: Color {
-        switch status {
-        case .locked:
-            return Color.white.opacity(0.7)
-        default:
-            return Color.white
-        }
-    }
-    
-    private var textColor: Color {
-        switch status {
-        case .locked:
-            return Color.gray.opacity(0.7)
-        default:
-            return Color.primary
-        }
-    }
-    
-    private var textAlignment: TextAlignment {
-        switch alignment {
-        case .left:
-            return .leading
-        case .right:
-            return .trailing
-        case .center:
-            return .center
-        }
-    }
-    
-    private var shadowColor: Color {
-        switch status {
-        case .locked:
-            return Color.black.opacity(0.08)
-        case .current:
-            return Color.green.opacity(0.45)
-        case .completed:
-            return Color.green.opacity(0.35)
+    private var borderColor: Color {
+        if isLocked {
+            return .gray
+        } else if isCompleted {
+            return AppColors.duolingoGreen
+        } else if isCurrent {
+            return AppColors.primaryOrange
+        } else {
+            return island.type.color
         }
     }
 }
 
-// MARK: - Connector
-private struct TimelineConnector: View {
-    let color: Color
-    
-    var body: some View {
-        RoundedRectangle(cornerRadius: 6, style: .continuous)
-            .fill(color)
-    }
-}
-
-// MARK: - Journey Summary Card
-private struct JourneySummaryCard: View {
-    let completed: Int
-    let total: Int
-    
-    private var completionText: String {
-        "\(completed) of \(total) stages completed"
-    }
-    
-    private var percentageText: String {
-        guard total > 0 else { return "0%" }
-        let ratio = Double(completed) / Double(total)
-        return "\(Int(ratio * 100))%"
-    }
-    
-    var body: some View {
-        HStack(alignment: .center, spacing: 20) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Journey Progress")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                Text(completionText)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.secondary)
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(percentageText)
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.green)
-                ProgressView(value: total == 0 ? 0 : Double(completed) / Double(total))
-                    .progressViewStyle(.linear)
-                    .tint(Color.green)
-                    .frame(width: 120)
-            }
-        }
-        .padding(24)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.white.opacity(0.9))
-                .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 12)
-        )
+#Preview {
+    NavigationStack {
+        IslandTimelineView()
+            .environmentObject(BusinessPlanStore())
     }
 }

@@ -13,334 +13,265 @@ struct AIAssistantView: View {
     
     var body: some View {
         ZStack {
-            // Gradient Background
-            LinearGradient(
-                colors: [
-                    Color(red: 0.1, green: 0.1, blue: 0.18),
-                    Color(red: 0.09, green: 0.13, blue: 0.24)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            AppColors.backgroundGradient
+                .ignoresSafeArea()
             
             ScrollView {
                 VStack(spacing: 24) {
-                    // Header
-                    HStack {
-                        Image(systemName: "sparkles")
-                            .font(.title)
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [.orange, .pink],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                        
-                        VStack(alignment: .leading) {
-                            Text("AI Assistant")
-                                .font(.title2.bold())
-                                .foregroundColor(.white)
-                            Text("Powered by Google Gemini")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-                        
-                        Spacer()
-                        
-                        Button {
-                            dismiss()
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(.gray)
+                    // Header Card
+                    ModernCard(
+                        gradient: AppColors.vibrantGradient,
+                        padding: 24
+                    ) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.white.opacity(0.25))
+                                        .frame(width: 60, height: 60)
+                                    
+                                    Image(systemName: "sparkles")
+                                        .font(.system(size: 30))
+                                        .foregroundColor(.white)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("AI Assistant")
+                                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                    Text("Powered by Google Gemini")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.9))
+                                }
+                            }
+                            
+                            HStack {
+                                Image(systemName: "lightbulb.fill")
+                                    .foregroundColor(.white.opacity(0.9))
+                                Text(businessIdea.title)
+                                    .font(.body)
+                                    .foregroundColor(.white.opacity(0.9))
+                            }
                         }
                     }
-                    .padding()
+                    .fadeInUp()
                     
-                    // Business Idea Context
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Your Business")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                        
-                        HStack {
-                            Image(systemName: "lightbulb.fill")
-                                .foregroundColor(.orange)
-                            Text(businessIdea.title)
-                                .font(.body)
-                                .foregroundColor(.white)
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.white.opacity(0.1))
-                        .cornerRadius(12)
-                    }
-                    .padding(.horizontal)
-                    
-                    // AI Analysis Section
+                    // AI Analysis
                     if let analysis = viewModel.businessAnalysis {
-                        AIAnalysisCard(analysis: analysis)
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Business Analysis")
+                                .font(.headline)
+                                .padding(.horizontal, 24)
+                            
+                            ModernCard(padding: 20) {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    HStack {
+                                        Text("Viability Score")
+                                            .font(.headline)
+                                        Spacer()
+                                        Text("\(analysis.viabilityScore)%")
+                                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                                            .foregroundColor(viabilityColor(score: analysis.viabilityScore))
+                                    }
+                                    
+                                    AnimatedProgressRing(
+                                        progress: Double(analysis.viabilityScore) / 100.0,
+                                        gradient: viabilityScoreGradient(score: analysis.viabilityScore),
+                                        size: 100
+                                    )
+                                    .frame(maxWidth: .infinity)
+                                    
+                                    if !analysis.strengths.isEmpty {
+                                        AnalysisCard(title: "Strengths", items: analysis.strengths, color: AppColors.duolingoGreen)
+                                    }
+                                    
+                                    if !analysis.opportunities.isEmpty {
+                                        AnalysisCard(title: "Opportunities", items: analysis.opportunities, color: AppColors.brightBlue)
+                                    }
+                                    
+                                    if !analysis.weaknesses.isEmpty {
+                                        AnalysisCard(title: "Weaknesses", items: analysis.weaknesses, color: AppColors.primaryOrange)
+                                    }
+                                    
+                                    if !analysis.threats.isEmpty {
+                                        AnalysisCard(title: "Threats", items: analysis.threats, color: .red)
+                                    }
+                                    
+                                    if !analysis.recommendations.isEmpty {
+                                        ModernCard(
+                                            borderColor: AppColors.primaryOrange.opacity(0.5),
+                                            padding: 16
+                                        ) {
+                                            VStack(alignment: .leading, spacing: 12) {
+                                                Text("Recommendations")
+                                                    .font(.headline)
+                                                
+                                                ForEach(analysis.recommendations, id: \.self) { rec in
+                                                    HStack(alignment: .top, spacing: 8) {
+                                                        Image(systemName: "checkmark.circle.fill")
+                                                            .foregroundColor(AppColors.primaryOrange)
+                                                            .font(.caption)
+                                                        Text(rec)
+                                                            .font(.caption)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 24)
+                        }
+                        .fadeInUp(delay: 0.1)
                     }
                     
-                    // Daily Goals Section
+                    // Daily Goals
                     if !viewModel.dailyGoals.isEmpty {
-                        DailyGoalsCard(goals: viewModel.dailyGoals)
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("AI-Generated Daily Goals")
+                                .font(.headline)
+                                .padding(.horizontal, 24)
+                            
+                            ForEach(Array(viewModel.dailyGoals.enumerated()), id: \.offset) { index, goal in
+                                ModernCard(padding: 16) {
+                                    HStack(alignment: .top, spacing: 12) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(AppColors.primaryOrange.opacity(0.15))
+                                                .frame(width: 32, height: 32)
+                                            Text("\(index + 1)")
+                                                .font(.caption.bold())
+                                                .foregroundColor(AppColors.primaryOrange)
+                                        }
+                                        Text(goal)
+                                            .font(.body)
+                                    }
+                                }
+                                .padding(.horizontal, 24)
+                            }
+                        }
+                        .fadeInUp(delay: 0.2)
                     }
                     
-                    // Personalized Advice Section
+                    // Personalized Advice
                     if !viewModel.personalizedAdvice.isEmpty {
-                        PersonalizedAdviceCard(advice: viewModel.personalizedAdvice)
+                        ModernCard(
+                            gradient: LinearGradient(
+                                colors: [AppColors.primaryPink.opacity(0.3), AppColors.primaryOrange.opacity(0.3)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            padding: 20
+                        ) {
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Image(systemName: "heart.fill")
+                                        .foregroundColor(AppColors.primaryPink)
+                                    Text("Personalized Advice")
+                                        .font(.headline)
+                                }
+                                Text(viewModel.personalizedAdvice)
+                                    .font(.body)
+                                    .foregroundColor(.primary)
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        .fadeInUp(delay: 0.3)
                     }
                     
-                    // Action Buttons
-                    VStack(spacing: 16) {
-                        AIActionButton(
-                            title: "Analyze Business Idea",
+                    // Actions
+                    VStack(spacing: 12) {
+                        PlayfulButton(
+                            title: viewModel.isAnalyzing ? "Analyzing..." : "Analyze Business Idea",
                             icon: "chart.bar.fill",
+                            gradient: AppColors.primaryGradient,
                             isLoading: viewModel.isAnalyzing
                         ) {
                             viewModel.analyzeBusinessIdea()
                         }
                         
-                        AIActionButton(
-                            title: "Generate Daily Goals",
+                        PlayfulButton(
+                            title: viewModel.isGeneratingGoals ? "Generating..." : "Generate Daily Goals",
                             icon: "target",
+                            gradient: AppColors.successGradient,
                             isLoading: viewModel.isGeneratingGoals
                         ) {
                             viewModel.generateDailyGoals()
                         }
                         
-                        AIActionButton(
-                            title: "Get Personalized Advice",
+                        PlayfulButton(
+                            title: viewModel.isGettingAdvice ? "Getting advice..." : "Get Personalized Advice",
                             icon: "message.fill",
+                            gradient: AppColors.blueGradient,
                             isLoading: viewModel.isGettingAdvice
                         ) {
                             viewModel.getPersonalizedAdvice()
                         }
                     }
-                    .padding(.horizontal)
-                    .padding(.bottom, 32)
-                }
-            }
-        }
-    }
-}
-
-// MARK: - AI Analysis Card
-
-struct AIAnalysisCard: View {
-    let analysis: AIBusinessAnalysis
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Business Analysis")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                Spacer()
-                ViabilityBadge(score: analysis.viabilityScore)
-            }
-            
-            SectionList(title: "Strengths", items: analysis.strengths, color: .green)
-            SectionList(title: "Opportunities", items: analysis.opportunities, color: .blue)
-            SectionList(title: "Weaknesses", items: analysis.weaknesses, color: .orange)
-            SectionList(title: "Threats", items: analysis.threats, color: .red)
-            
-            if !analysis.recommendations.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("🎯 Recommendations")
-                        .font(.subheadline.bold())
-                        .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .fadeInUp(delay: 0.4)
                     
-                    ForEach(analysis.recommendations, id: \.self) { rec in
-                        HStack(alignment: .top, spacing: 8) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.orange)
-                                .font(.caption)
-                            Text(rec)
-                                .font(.caption)
-                                .foregroundColor(.white.opacity(0.9))
-                        }
-                    }
+                    Spacer()
+                        .frame(height: 40)
                 }
-                .padding(.top, 8)
+                .padding(.vertical, 16)
             }
         }
-        .padding()
-        .background(Color.white.opacity(0.1))
-        .cornerRadius(16)
-        .padding(.horizontal)
+        .navigationTitle("AI Assistant")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Done") {
+                    dismiss()
+                }
+            }
+        }
+    }
+    
+    private func viabilityColor(score: Int) -> Color {
+        if score >= 80 { return AppColors.duolingoGreen }
+        if score >= 60 { return AppColors.primaryOrange }
+        return .red
+    }
+    
+    private func viabilityScoreGradient(score: Int) -> LinearGradient {
+        if score >= 80 {
+            return AppColors.successGradient
+        } else if score >= 60 {
+            return AppColors.primaryGradient
+        } else {
+            return LinearGradient(colors: [.red, .red.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
+        }
     }
 }
 
-struct SectionList: View {
+private struct AnalysisCard: View {
     let title: String
     let items: [String]
     let color: Color
     
     var body: some View {
-        if !items.isEmpty {
-            VStack(alignment: .leading, spacing: 6) {
+        ModernCard(
+            borderColor: color.opacity(0.3),
+            padding: 16
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text(title)
-                    .font(.caption.bold())
+                    .font(.subheadline.bold())
                     .foregroundColor(color)
                 
                 ForEach(items, id: \.self) { item in
-                    HStack(alignment: .top, spacing: 6) {
+                    HStack(alignment: .top, spacing: 8) {
                         Circle()
                             .fill(color)
-                            .frame(width: 4, height: 4)
+                            .frame(width: 6, height: 6)
                             .padding(.top, 6)
                         Text(item)
                             .font(.caption)
-                            .foregroundColor(.white.opacity(0.8))
                     }
                 }
             }
         }
-    }
-}
-
-struct ViabilityBadge: View {
-    let score: Int
-    
-    var color: Color {
-        if score >= 80 { return .green }
-        if score >= 60 { return .orange }
-        return .red
-    }
-    
-    var body: some View {
-        HStack(spacing: 4) {
-            Text("\(score)%")
-                .font(.caption.bold())
-            Text("Viable")
-                .font(.caption)
-        }
-        .foregroundColor(.white)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(color.opacity(0.3))
-        .cornerRadius(8)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(color, lineWidth: 1)
-        )
-    }
-}
-
-// MARK: - Daily Goals Card
-
-struct DailyGoalsCard: View {
-    let goals: [String]
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("🎯 AI-Generated Daily Goals")
-                .font(.headline)
-                .foregroundColor(.white)
-            
-            ForEach(Array(goals.enumerated()), id: \.offset) { index, goal in
-                HStack(alignment: .top, spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [.orange, .pink],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 28, height: 28)
-                        Text("\(index + 1)")
-                            .font(.caption.bold())
-                            .foregroundColor(.white)
-                    }
-                    
-                    Text(goal)
-                        .font(.body)
-                        .foregroundColor(.white)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.vertical, 8)
-            }
-        }
-        .padding()
-        .background(Color.white.opacity(0.1))
-        .cornerRadius(16)
-        .padding(.horizontal)
-    }
-}
-
-// MARK: - Personalized Advice Card
-
-struct PersonalizedAdviceCard: View {
-    let advice: String
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "brain.head.profile")
-                    .foregroundColor(.orange)
-                Text("Personalized Advice")
-                    .font(.headline)
-                    .foregroundColor(.white)
-            }
-            
-            Text(advice)
-                .font(.body)
-                .foregroundColor(.white.opacity(0.9))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding()
-        .background(
-            LinearGradient(
-                colors: [Color.orange.opacity(0.2), Color.pink.opacity(0.2)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .cornerRadius(16)
-        .padding(.horizontal)
-    }
-}
-
-// MARK: - AI Action Button
-
-struct AIActionButton: View {
-    let title: String
-    let icon: String
-    let isLoading: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                if isLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                } else {
-                    Image(systemName: icon)
-                        .font(.headline)
-                }
-                Text(isLoading ? "Thinking..." : title)
-                    .font(.headline)
-            }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(
-                LinearGradient(
-                    colors: [.orange, .pink],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .cornerRadius(12)
-        }
-        .disabled(isLoading)
     }
 }
 
@@ -368,6 +299,12 @@ class AIAssistantViewModel: ObservableObject {
             "difficulty": businessIdea.difficulty
         ]
         
+        UserContextManager.shared.trackEvent(.aiInteractionStarted, context: [
+            "interactionType": "business_analysis",
+            "businessIdeaId": businessIdea.id,
+            "businessIdeaTitle": businessIdea.title
+        ])
+        
         GoogleAIService.shared.analyzeBusinessIdea(
             idea: businessIdea,
             userProfile: userProfile
@@ -377,8 +314,16 @@ class AIAssistantViewModel: ObservableObject {
                 switch result {
                 case .success(let analysis):
                     self?.businessAnalysis = analysis
+                    UserContextManager.shared.trackEvent(.aiResponseReceived, context: [
+                        "interactionType": "business_analysis",
+                        "viabilityScore": String(analysis.viabilityScore)
+                    ])
                 case .failure(let error):
                     print("Error analyzing idea: \(error)")
+                    UserContextManager.shared.trackEvent(.aiInteractionFailed, context: [
+                        "interactionType": "business_analysis",
+                        "error": error.localizedDescription
+                    ])
                 }
             }
         }
@@ -386,6 +331,11 @@ class AIAssistantViewModel: ObservableObject {
     
     func generateDailyGoals() {
         isGeneratingGoals = true
+        
+        UserContextManager.shared.trackEvent(.aiInteractionStarted, context: [
+            "interactionType": "daily_goals_generation",
+            "businessIdeaId": businessIdea.id
+        ])
         
         GoogleAIService.shared.generateDailyGoals(
             businessIdea: businessIdea,
@@ -396,8 +346,16 @@ class AIAssistantViewModel: ObservableObject {
                 switch result {
                 case .success(let goals):
                     self?.dailyGoals = goals
+                    UserContextManager.shared.trackEvent(.aiResponseReceived, context: [
+                        "interactionType": "daily_goals_generation",
+                        "goalsCount": String(goals.count)
+                    ])
                 case .failure(let error):
                     print("Error generating goals: \(error)")
+                    UserContextManager.shared.trackEvent(.aiInteractionFailed, context: [
+                        "interactionType": "daily_goals_generation",
+                        "error": error.localizedDescription
+                    ])
                 }
             }
         }
@@ -408,6 +366,11 @@ class AIAssistantViewModel: ObservableObject {
         
         let context = "Working on: \(businessIdea.title). \(businessIdea.description)"
         
+        UserContextManager.shared.trackEvent(.aiInteractionStarted, context: [
+            "interactionType": "personalized_advice",
+            "businessIdeaId": businessIdea.id
+        ])
+        
         GoogleAIService.shared.getPersonalizedAdvice(
             context: context,
             userGoals: dailyGoals
@@ -417,32 +380,39 @@ class AIAssistantViewModel: ObservableObject {
                 switch result {
                 case .success(let advice):
                     self?.personalizedAdvice = advice
+                    UserContextManager.shared.trackEvent(.aiResponseReceived, context: [
+                        "interactionType": "personalized_advice"
+                    ])
                 case .failure(let error):
                     print("Error getting advice: \(error)")
+                    UserContextManager.shared.trackEvent(.aiInteractionFailed, context: [
+                        "interactionType": "personalized_advice",
+                        "error": error.localizedDescription
+                    ])
                 }
             }
         }
     }
 }
 
-// MARK: - Preview
-
 #Preview {
-    AIAssistantView(businessIdea: BusinessIdea(
-        id: UUID().uuidString,
-        title: "AI-Powered Consulting",
-        description: "Help businesses leverage AI technology",
-        category: "Technology",
-        difficulty: "Medium",
-        estimatedRevenue: "$100K-$250K/year",
-        timeToLaunch: "3-6 months",
-        requiredSkills: ["AI/ML", "Business", "Communication"],
-        startupCost: "$5K-$15K",
-        profitMargin: "60-80%",
-        marketDemand: "High",
-        competition: "Medium",
-        createdAt: Date(),
-        userId: "",
-        personalizedNotes: "Perfect for tech-savvy entrepreneurs"
-    ))
+    NavigationStack {
+        AIAssistantView(businessIdea: BusinessIdea(
+            id: UUID().uuidString,
+            title: "AI-Powered Consulting",
+            description: "Help businesses leverage AI technology",
+            category: "Technology",
+            difficulty: "Medium",
+            estimatedRevenue: "$100K-$250K/year",
+            timeToLaunch: "3-6 months",
+            requiredSkills: ["AI/ML", "Business", "Communication"],
+            startupCost: "$5K-$15K",
+            profitMargin: "60-80%",
+            marketDemand: "High",
+            competition: "Medium",
+            createdAt: Date(),
+            userId: "",
+            personalizedNotes: "Perfect for tech-savvy entrepreneurs"
+        ))
+    }
 }

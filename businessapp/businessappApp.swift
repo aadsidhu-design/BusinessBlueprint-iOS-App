@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+import FirebaseCore
+import FirebaseAuth
+import FirebaseFirestore
 
 @main
 struct businessappApp: App {
@@ -13,22 +16,22 @@ struct businessappApp: App {
     @StateObject private var businessPlanStore = BusinessPlanStore()
     
     init() {
+        // Configure Firebase with minimal services (Auth + Firestore only)
+        FirebaseApp.configure()
+        
+        // Disable App Check to avoid 403 errors
+        // We only use Auth and Firestore for this app
+        
         let authViewModel = AuthViewModel()
         _authVM = StateObject(wrappedValue: authViewModel)
-        authViewModel.checkLoginStatus()
     }
     
     var body: some Scene {
         WindowGroup {
-            if authVM.isLoggedIn {
-                RootView()
-                    .environmentObject(authVM)
-                    .environmentObject(businessPlanStore)
-            } else {
-                LaunchView()
-                    .environmentObject(authVM)
-                    .environmentObject(businessPlanStore)
-            }
+            ContentView()
+                .environmentObject(authVM)
+                .environmentObject(businessPlanStore)
+                .preferredColorScheme(.dark)
         }
     }
 }

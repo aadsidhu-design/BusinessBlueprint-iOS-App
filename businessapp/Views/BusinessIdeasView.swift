@@ -5,145 +5,151 @@ struct BusinessIdeasView: View {
     @StateObject private var viewModel = BusinessIdeaViewModel()
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 0.05, green: 0.15, blue: 0.35),
-                        Color(red: 0.1, green: 0.2, blue: 0.4)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+        ZStack {
+            AppColors.backgroundGradient
                 .ignoresSafeArea()
-                
+            
+            if viewModel.isLoading {
+                ProgressView()
+                    .tint(AppColors.primaryOrange)
+                    .scaleEffect(1.5)
+            } else if viewModel.businessIdeas.isEmpty {
+                EmptyIdeasView()
+            } else {
                 ScrollView {
-                    VStack(spacing: 20) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Business Ideas")
-                                .font(.system(size: 28, weight: .bold))
-                                .foregroundColor(.white)
-                            
-                            Text("Personalized opportunities for you")
-                                .font(.system(size: 14))
-                                .foregroundColor(.white.opacity(0.7))
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(20)
-                        
-                        if let error = viewModel.errorMessage {
-                            Text(error)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(.yellow)
-                                .padding(.horizontal, 20)
-                        }
-                        
-                        if viewModel.isLoading {
-                            ProgressView()
-                                .scaleEffect(1.5)
-                                .tint(Color(red: 1, green: 0.6, blue: 0.2))
-                                .frame(maxHeight: .infinity, alignment: .center)
-                                .padding(60)
-                        } else if viewModel.businessIdeas.isEmpty {
-                            EmptyStateView()
-                                .padding(20)
-                        } else {
-                            VStack(spacing: 16) {
-                                ForEach(viewModel.businessIdeas) { idea in
-                                    NavigationLink(destination: IdeaDetailView(idea: idea, viewModel: viewModel)) {
-                                        IdeaCard(idea: idea)
-                                    }
-                                    .simultaneousGesture(TapGesture().onEnded {
-                                        viewModel.selectIdea(idea)
-                                    })
-                                }
+                    LazyVStack(spacing: 16) {
+                        ForEach(Array(viewModel.businessIdeas.enumerated()), id: \.element.id) { index, idea in
+                            NavigationLink {
+                                IdeaDetailView(idea: idea, viewModel: viewModel)
+                            } label: {
+                                OldIdeaCard(idea: idea)
                             }
-                            .padding(20)
+                            .buttonStyle(.plain)
+                            .onTapGesture {
+                                viewModel.selectIdea(idea)
+                            }
+                            .fadeInUp(delay: Double(index) * 0.1)
                         }
                     }
+                    .padding(24)
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
         }
+        .navigationTitle("Business Ideas")
+        .navigationBarTitleDisplayMode(.large)
         .onAppear {
             viewModel.attachStore(businessPlanStore)
         }
     }
 }
 
-struct IdeaCard: View {
+private struct OldIdeaCard: View {
     let idea: BusinessIdea
+    @State private var isPressed = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Header
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(idea.title)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
+        ModernCard(
+            borderColor: AppColors.primaryOrange.opacity(0.3),
+            padding: 20
+        ) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(idea.title)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundColor(.primary)
+                        
+                        ColorfulBadge(idea.category, icon: "tag.fill", color: AppColors.primaryOrange)
+                    }
                     
-                    Text(idea.category)
-                        .font(.system(size: 12))
-                        .foregroundColor(Color(red: 1, green: 0.6, blue: 0.2))
+                    Spacer()
+                    
+                    if idea.progress > 0 {
+                        ZStack {
+                            Circle()
+                                .stroke(Color.gray.opacity(0.2), lineWidth: 6)
+                                .frame(width: 50, height: 50)
+                            
+                            Circle()
+                                .trim(from: 0, to: Double(idea.progress) / 100.0)
+                                .stroke(
+                                    AppColors.primaryGradient,
+                                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                                )
+                                .frame(width: 50, height: 50)
+                                .rotationEffect(.degrees(-90))
+                            
+                            Text("\(idea.progress)%")
+                                .font(.caption.bold())
+                                .foregroundColor(AppColors.primaryOrange)
+                        }
+                    } else {
+                        Image(systemName: "lightbulb.fill")
+                            .font(.title2)
+                            .foregroundStyle(AppColors.primaryGradient)
+                    }
                 }
                 
-                Spacer()
+                Text(idea.description)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .lineLimit(3)
                 
-                Image(systemName: "chevron.right")
-                    .foregroundColor(.white.opacity(0.5))
-            }
-            
-            // Description
-            Text(idea.description)
-                .font(.system(size: 13))
-                .foregroundColor(.white.opacity(0.8))
-                .lineLimit(2)
-            
-            // Key Metrics
-            HStack(spacing: 12) {
-                MetricBadge(label: "Revenue", value: idea.estimatedRevenue)
-                MetricBadge(label: "Timeline", value: idea.timeToLaunch)
-                MetricBadge(label: "Demand", value: idea.marketDemand)
-            }
-            
-            // Progress Bar
-            if idea.progress > 0 {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Your Progress")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.7))
+                HStack {
+                    HStack(spacing: 4) {
+                        Image(systemName: "dollarsign.circle.fill")
+                            .font(.caption)
+                        Text(idea.estimatedRevenue)
+                            .font(.caption)
+                    }
+                    .foregroundColor(AppColors.duolingoGreen)
                     
-                    ProgressView(value: Double(idea.progress), total: 100)
-                        .tint(Color(red: 1, green: 0.6, blue: 0.2))
+                    Spacer()
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.fill")
+                            .font(.caption)
+                        Text(idea.timeToLaunch)
+                            .font(.caption)
+                    }
+                    .foregroundColor(AppColors.brightBlue)
                 }
             }
         }
-        .padding(16)
-        .background(Color.white.opacity(0.08))
-        .cornerRadius(14)
+        .scaleEffect(isPressed ? 0.98 : 1.0)
+        .animation(AnimationHelpers.cardTap, value: isPressed)
     }
 }
 
-struct MetricBadge: View {
-    let label: String
-    let value: String
-    
+private struct EmptyIdeasView: View {
     var body: some View {
-        VStack(spacing: 2) {
-            Text(label)
-                .font(.system(size: 10))
-                .foregroundColor(.white.opacity(0.6))
+        VStack(spacing: 24) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [AppColors.primaryOrange.opacity(0.2), AppColors.primaryPink.opacity(0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 120, height: 120)
+                
+                Image(systemName: "lightbulb.slash")
+                    .font(.system(size: 60))
+                    .foregroundStyle(AppColors.primaryGradient)
+            }
+            .bounceEntrance()
             
-            Text(value)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(.white)
-                .lineLimit(1)
+            Text("No Ideas Yet")
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+            
+            Text("Complete the quiz to generate personalized business ideas")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
         }
-        .frame(maxWidth: .infinity)
-        .padding(8)
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(8)
     }
 }
 
@@ -161,142 +167,197 @@ struct IdeaDetailView: View {
     
     var body: some View {
         ZStack {
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 0.05, green: 0.15, blue: 0.35),
-                    Color(red: 0.1, green: 0.2, blue: 0.4)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            AppColors.backgroundGradient
+                .ignoresSafeArea()
             
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    // Hero Section
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(currentIdea.title)
-                                    .font(.system(size: 28, weight: .bold))
-                                    .foregroundColor(.white)
+                VStack(spacing: 24) {
+                    // Hero Card
+                    ModernCard(
+                        gradient: AppColors.vibrantGradient,
+                        padding: 24
+                    ) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(currentIdea.title)
+                                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                    
+                                    ColorfulBadge(currentIdea.category, icon: "tag.fill", color: .white.opacity(0.9))
+                                }
                                 
-                                Text(currentIdea.category)
-                                    .font(.system(size: 14))
-                                    .foregroundColor(Color(red: 1, green: 0.6, blue: 0.2))
+                                Spacer()
+                                
+                                Image(systemName: "lightbulb.fill")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.white.opacity(0.9))
                             }
-                            
-                            Spacer()
-                            
-                            Image(systemName: currentIdea.saved ? "star.fill" : "star")
-                                .font(.system(size: 24))
-                                .foregroundColor(currentIdea.saved ? .yellow : .white.opacity(0.5))
                         }
                     }
-                    .padding(20)
+                    .fadeInUp()
                     
                     // Description
-                    DetailSection(title: "Overview", content: currentIdea.description)
-                        .padding(.horizontal, 20)
+                    ModernCard(padding: 20) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Description")
+                                .font(.headline)
+                            
+                            Text(currentIdea.description)
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .fadeInUp(delay: 0.1)
                     
                     // Key Details Grid
-                    VStack(spacing: 12) {
-                        DetailGrid(
-                            items: [
-                                ("💰", "Revenue", currentIdea.estimatedRevenue),
-                                ("⏱️", "Launch Time", currentIdea.timeToLaunch),
-                                ("🎯", "Difficulty", currentIdea.difficulty),
-                                ("💵", "Startup Cost", currentIdea.startupCost),
-                                ("📊", "Profit Margin", currentIdea.profitMargin),
-                                ("📈", "Market Demand", currentIdea.marketDemand),
-                                ("🏆", "Competition", currentIdea.competition),
-                                ("⚙️", "Skills Required", currentIdea.requiredSkills.joined(separator: ", "))
-                            ]
+                    LazyVGrid(columns: [
+                        GridItem(.flexible(), spacing: 12),
+                        GridItem(.flexible(), spacing: 12)
+                    ], spacing: 12) {
+                        DetailCard(
+                            icon: "dollarsign.circle.fill",
+                            title: "Revenue",
+                            value: currentIdea.estimatedRevenue,
+                            color: AppColors.duolingoGreen
+                        )
+                        
+                        DetailCard(
+                            icon: "clock.fill",
+                            title: "Launch Time",
+                            value: currentIdea.timeToLaunch,
+                            color: AppColors.brightBlue
+                        )
+                        
+                        DetailCard(
+                            icon: "chart.bar.fill",
+                            title: "Difficulty",
+                            value: currentIdea.difficulty,
+                            color: AppColors.primaryOrange
+                        )
+                        
+                        DetailCard(
+                            icon: "dollarsign.circle.fill",
+                            title: "Startup Cost",
+                            value: currentIdea.startupCost,
+                            color: AppColors.primaryPink
                         )
                     }
-                    .padding(20)
+                    .fadeInUp(delay: 0.2)
+                    
+                    // Additional Details
+                    ModernCard(padding: 20) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            DetailRow(icon: "percent", title: "Profit Margin", value: currentIdea.profitMargin)
+                            DetailRow(icon: "arrow.up.right", title: "Market Demand", value: currentIdea.marketDemand)
+                            DetailRow(icon: "person.2.fill", title: "Competition", value: currentIdea.competition)
+                            
+                            if !currentIdea.requiredSkills.isEmpty {
+                                Divider()
+                                
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Label("Skills Required", systemImage: "star.fill")
+                                        .font(.headline)
+                                    
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 8) {
+                                            ForEach(currentIdea.requiredSkills, id: \.self) { skill in
+                                                ColorfulBadge(skill, color: AppColors.primaryOrange)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .fadeInUp(delay: 0.3)
                     
                     // Personalized Notes
-                    DetailSection(title: "Why This For You?", content: currentIdea.personalizedNotes)
-                        .padding(.horizontal, 20)
-                    
-                    // AI Suggestions Button
-                    Button(action: {
-                        isLoadingAI = true
-                        viewModel.getAISuggestions(for: currentIdea) { suggestions in
-                            aiSuggestions = suggestions
-                            isLoadingAI = false
-                            showAISuggestions = true
+                    if !currentIdea.personalizedNotes.isEmpty {
+                        ModernCard(
+                            borderColor: AppColors.primaryOrange.opacity(0.5),
+                            padding: 20
+                        ) {
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Image(systemName: "heart.fill")
+                                        .foregroundColor(AppColors.primaryPink)
+                                    Text("Why This For You?")
+                                        .font(.headline)
+                                }
+                                
+                                Text(currentIdea.personalizedNotes)
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                            }
                         }
-                    }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "sparkles")
-                            Text(isLoadingAI ? "Getting Suggestions..." : "Get AI Suggestions")
-                                .font(.system(size: 16, weight: .semibold))
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .padding(.horizontal, 20)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color(red: 1, green: 0.6, blue: 0.2),
-                                    Color(red: 1, green: 0.4, blue: 0.1)
-                                ]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
+                        .fadeInUp(delay: 0.4)
                     }
                     
-                    // Action Buttons
-                    HStack(spacing: 12) {
-                        Button(action: { viewModel.saveIdea(currentIdea) }) {
-                            HStack {
-                                Image(systemName: "bookmark.fill")
-                                Text("Save")
+                    // Actions
+                    VStack(spacing: 12) {
+                        PlayfulButton(
+                            title: isLoadingAI ? "Loading..." : "Get AI Suggestions",
+                            icon: "sparkles",
+                            gradient: AppColors.primaryGradient,
+                            isLoading: isLoadingAI
+                        ) {
+                            isLoadingAI = true
+                            viewModel.getAISuggestions(for: currentIdea) { suggestions in
+                                DispatchQueue.main.async {
+                                    self.aiSuggestions = suggestions
+                                    self.isLoadingAI = false
+                                    self.showAISuggestions = true
+                                }
                             }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .foregroundColor(.white)
-                            .background(Color.white.opacity(0.15))
-                            .cornerRadius(12)
                         }
                         
-                        Button(action: {
-                            viewModel.updateProgress(ideaId: currentIdea.id, progress: 25)
-                        }) {
-                            HStack {
-                                Image(systemName: "play.fill")
-                                Text("Start")
+                        HStack(spacing: 12) {
+                            Button {
+                                viewModel.saveIdea(currentIdea)
+                                HapticManager.shared.trigger(.success)
+                            } label: {
+                                HStack {
+                                    Image(systemName: "bookmark.fill")
+                                    Text("Save")
+                                }
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 50)
+                                .background(AppColors.brightBlue)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
                             }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color(red: 1, green: 0.6, blue: 0.2),
-                                        Color(red: 1, green: 0.4, blue: 0.1)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
+                            
+                            Button {
+                                viewModel.updateProgress(ideaId: currentIdea.id, progress: 25)
+                                HapticManager.shared.trigger(.success)
+                            } label: {
+                                HStack {
+                                    Image(systemName: "play.fill")
+                                    Text("Start")
+                                }
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 50)
+                                .background(AppColors.successGradient)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                            }
                         }
                     }
-                    .padding(20)
+                    .fadeInUp(delay: 0.5)
+                    
+                    Spacer()
+                        .frame(height: 40)
                 }
+                .padding(24)
             }
         }
-        .navigationBarBackButtonHidden(false)
+        .navigationTitle("Business Idea")
+        .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showAISuggestions) {
-            AISuggestionsView(isPresented: $showAISuggestions, suggestions: aiSuggestions)
+            AISuggestionsSheet(suggestions: aiSuggestions)
         }
         .onAppear {
             viewModel.selectIdea(idea)
@@ -304,135 +365,87 @@ struct IdeaDetailView: View {
     }
 }
 
-struct DetailSection: View {
+private struct DetailCard: View {
+    let icon: String
     let title: String
-    let content: String
+    let value: String
+    let color: Color
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
-            
-            Text(content)
-                .font(.system(size: 14))
-                .foregroundColor(.white.opacity(0.8))
-                .lineSpacing(1.5)
-                .padding(14)
-                .background(Color.white.opacity(0.05))
-                .cornerRadius(12)
-        }
-    }
-}
-
-struct DetailGrid: View {
-    let items: [(String, String, String)]
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            ForEach(items, id: \.1) { icon, label, value in
-                HStack(spacing: 12) {
-                    Text(icon)
-                        .font(.system(size: 20))
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(label)
-                            .font(.system(size: 12))
-                            .foregroundColor(.white.opacity(0.6))
-                        
-                        Text(value)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                    }
-                    
-                    Spacer()
-                }
-                .padding(12)
-                .background(Color.white.opacity(0.05))
-                .cornerRadius(10)
+        ModernCard(
+            borderColor: color.opacity(0.3),
+            padding: 16
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundColor(color)
+                
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Text(value)
+                    .font(.headline)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
 
-struct AISuggestionsView: View {
-    @Binding var isPresented: Bool
+private struct DetailRow: View {
+    let icon: String
+    let title: String
+    let value: String
+    
+    var body: some View {
+        HStack {
+            Label(title, systemImage: icon)
+                .font(.body)
+                .foregroundColor(.primary)
+            Spacer()
+            Text(value)
+                .font(.body)
+                .fontWeight(.semibold)
+                .foregroundColor(AppColors.primaryOrange)
+        }
+    }
+}
+
+private struct AISuggestionsSheet: View {
     let suggestions: String
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 0.05, green: 0.15, blue: 0.35),
-                        Color(red: 0.1, green: 0.2, blue: 0.4)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                AppColors.backgroundGradient
+                    .ignoresSafeArea()
                 
-                VStack {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(.yellow)
-                                
-                                Text("AI Suggestions")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.white)
-                            }
-                            
-                            Text(suggestions.isEmpty ? "Next steps to launch your business idea" : suggestions)
-                                .font(.system(size: 14))
-                                .foregroundColor(.white.opacity(0.8))
-                                .lineSpacing(2)
-                                .padding(14)
-                                .background(Color.white.opacity(0.05))
-                                .cornerRadius(12)
-                        }
-                        .padding(20)
+                ScrollView {
+                    ModernCard(padding: 24) {
+                        Text(suggestions.isEmpty ? "Next steps to launch your business idea" : suggestions)
+                            .font(.body)
+                            .lineSpacing(6)
                     }
-                    
-                    Button(action: { isPresented = false }) {
-                        Text("Done")
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(Color(red: 1, green: 0.6, blue: 0.2))
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                    }
-                    .padding(20)
+                    .padding(24)
                 }
             }
-            .navigationTitle("Next Steps")
+            .navigationTitle("AI Suggestions")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
         }
-    }
-}
-
-struct EmptyStateView: View {
-    var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "lightbulb.slash")
-                .font(.system(size: 60))
-                .foregroundColor(.white.opacity(0.3))
-            
-            Text("No Ideas Yet")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(.white)
-            
-            Text("Complete the quiz to generate personalized business ideas")
-                .font(.system(size: 14))
-                .foregroundColor(.white.opacity(0.6))
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
 #Preview {
-    BusinessIdeasView()
+    NavigationStack {
+        BusinessIdeasView()
+    }
 }

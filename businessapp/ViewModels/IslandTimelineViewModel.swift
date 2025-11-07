@@ -12,7 +12,8 @@ class IslandTimelineViewModel: ObservableObject {
     @Published var dashboardGoals: [DailyGoal] = []
     
     private var cancellables = Set<AnyCancellable>()
-    private let googleAIService = GoogleAIService()
+    private let googleAIService = GoogleAIService.shared
+    private let eventViewModel = EventViewModel()
     
     // MARK: - Persistence Keys
     private let islandsKey = "saved_islands"
@@ -200,6 +201,108 @@ class IslandTimelineViewModel: ObservableObject {
         persistIslands()
     }
     
+    // MARK: - AI Dynamic Island Generation
+    func generateAITimelineIslands(businessIdea: BusinessIdea, numberOfIslands: Int, completion: @escaping (Bool) -> Void) {
+        googleAIService.generateTimelineIslands(
+            businessIdea: businessIdea,
+            numberOfIslands: numberOfIslands
+        ) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let timelineIslands):
+                    self?.convertTimelineIslandsToIslands(timelineIslands: timelineIslands, businessIdea: businessIdea)
+                    completion(true)
+                case .failure(let error):
+                    print("Failed to generate AI timeline islands: \(error)")
+                    // Fallback to default generation
+                    self?.generateFallbackIslands(count: numberOfIslands, businessIdea: businessIdea)
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    private func convertTimelineIslandsToIslands(timelineIslands: [TimelineIsland], businessIdea: BusinessIdea) {
+        islands.removeAll()
+        
+        // Create islands from AI generated timeline
+        for (index, timelineIsland) in timelineIslands.enumerated() {
+            let xPos: CGFloat = getXPosition(for: index)
+            let yPos: CGFloat = getYPosition(for: index)
+            
+            let islandType: IslandType = {
+                if index == 0 { return .start }
+                else if index == timelineIslands.count - 1 { return .treasure }
+                else if index % 3 == 0 { return .milestone }
+                else { return .regular }
+            }()
+            
+            let island = Island(
+                title: timelineIsland.title,
+                description: timelineIsland.description,
+                goalIds: [], // We can generate goals for each island later
+                position: CGPoint(x: xPos, y: yPos),
+                type: islandType,
+                order: index
+            )
+            islands.append(island)
+        }
+        
+        // Set current island to first one
+        if !islands.isEmpty {
+            journeyProgress.currentIslandId = islands[0].id
+            currentIslandIndex = 0
+        }
+        
+        persistIslands()
+    }
+    
+    private func generateFallbackIslands(count: Int, businessIdea: BusinessIdea) {
+        islands.removeAll()
+        
+        let fallbackTitles = [
+            "🚀 Foundation & Research",
+            "🛠️ Build & Develop",
+            "🎯 Test & Validate", 
+            "📈 Launch & Market",
+            "⚡ Scale & Optimize",
+            "🏆 Growth & Success"
+        ]
+        
+        for i in 0..<count {
+            let title = i < fallbackTitles.count ? fallbackTitles[i] : "Stage \(i + 1)"
+            
+            let island = Island(
+                title: title,
+                description: "Business development milestone",
+                position: CGPoint(x: getXPosition(for: i), y: getYPosition(for: i)),
+                type: i == 0 ? .start : (i == count - 1 ? .treasure : .regular),
+                order: i
+            )
+            islands.append(island)
+        }
+        
+        if !islands.isEmpty {
+            journeyProgress.currentIslandId = islands[0].id
+            currentIslandIndex = 0
+        }
+        
+        persistIslands()
+    }
+    
+    private func getXPosition(for index: Int) -> CGFloat {
+        let offsets: [CGFloat] = [0, 60, -60, 80, -80, 40, -40, 100, -100]
+        let baseX: CGFloat = 200
+        let offset = offsets[index % offsets.count]
+        return baseX + offset
+    }
+    
+    private func getYPosition(for index: Int) -> CGFloat {
+        let baseY: CGFloat = 600
+        let spacing: CGFloat = 150
+        return baseY - (CGFloat(index) * spacing)
+    }
+    
     // MARK: - Island Navigation
     func moveToNextIsland() {
         guard currentIslandIndex < islands.count - 1 else { return }
@@ -288,7 +391,15 @@ class IslandTimelineViewModel: ObservableObject {
     
     // MARK: - AI Integration
     func askAIAboutProgress(question: String, completion: @escaping (String) -> Void) {
-        let context = buildProgressContext()
+        // Check if API key is configured
+        guard !Config.googleAIKey.isEmpty else {
+            DispatchQueue.main.async {
+                completion("⚠️ AI is not configured. Please set up your Google AI API key in the app settings.")
+            }
+            return
+        }
+        
+        _ = buildProgressContext()
         let prompt = """
         User is on an island-based journey to build their business: \(islands.first?.description ?? "business")
         
@@ -304,11 +415,14 @@ class IslandTimelineViewModel: ObservableObject {
         """
         
         googleAIService.getPersonalizedAdvice(context: prompt, userGoals: []) { result in
-            switch result {
-            case .success(let advice):
-                completion(advice)
-            case .failure:
-                completion("I'm here to help! Let's break down your question into actionable steps. What specific area would you like to focus on?")
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let advice):
+                    completion(advice)
+                case .failure(let error):
+                    print("AI Error: \(error.localizedDescription)")
+                    completion("I apologize, but I'm having trouble connecting right now. Please try again in a moment. If the issue persists, check your API key configuration.")
+                }
             }
         }
     }
@@ -325,7 +439,7 @@ class IslandTimelineViewModel: ObservableObject {
         
         googleAIService.makeAIRequest(prompt: prompt) { result in
             switch result {
-            case .success(let response):
+            case .success(_):
                 // Parse and update islands
                 completion(true, "Timeline updated based on your request!")
             case .failure:
@@ -376,8 +490,11 @@ class IslandTimelineViewModel: ObservableObject {
     
     // MARK: - Calendar Integration
     private func scheduleCalendarEvent(reminder: AppReminder) {
-        // This will be implemented with EventKit
-        // For now, it's a placeholder
+        eventViewModel.createAllDayEvent(on: reminder.scheduledDate, title: reminder.title) { success in
+            if !success {
+                print("Failed to add reminder to Calendar")
+            }
+        }
     }
     
     // MARK: - Persistence

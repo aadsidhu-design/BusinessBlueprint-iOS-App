@@ -153,6 +153,16 @@ class QuizViewModel: ObservableObject {
         let personality = Array(selectedPersonality)
         let interests = Array(selectedInterests)
         
+        // Track quiz completion
+        UserContextManager.shared.trackEvent(.quizCompleted, context: [
+            "skillsCount": String(skills.count),
+            "personalityCount": String(personality.count),
+            "interestsCount": String(interests.count),
+            "selectedSkills": skills.joined(separator: ", "),
+            "selectedPersonality": personality.joined(separator: ", "),
+            "selectedInterests": interests.joined(separator: ", ")
+        ])
+        
         GoogleAIService.shared.generateBusinessIdeas(
             skills: skills,
             personality: personality,
@@ -165,10 +175,22 @@ class QuizViewModel: ObservableObject {
                 case .success(let ideas):
                     self?.businessIdeas = ideas
                     print("✅ Generated \(ideas.count) AI-powered business ideas")
+                    
+                    // Track successful idea generation
+                    UserContextManager.shared.trackEvent(.businessIdeasGenerated, context: [
+                        "ideasCount": String(ideas.count),
+                        "categories": Set(ideas.map { $0.category }).joined(separator: ", ")
+                    ])
+                    
                 case .failure(let error):
                     print("⚠️ Error generating ideas: \(error.localizedDescription)")
-                    // AI fallback is handled in GoogleAIService
                     self?.businessIdeas = []
+                    
+                    // Track idea generation failure
+                    UserContextManager.shared.trackEvent(.aiInteractionFailed, context: [
+                        "interactionType": "business_idea_generation",
+                        "error": error.localizedDescription
+                    ])
                 }
             }
         }

@@ -12,181 +12,134 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 0.05, green: 0.15, blue: 0.35),
-                        Color(red: 0.1, green: 0.2, blue: 0.4)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                AppColors.background
+                    .ignoresSafeArea()
                 
                 ScrollView {
                     if businessPlanStore.businessIdeas.isEmpty {
                         DashboardEmptyState()
                             .padding(.vertical, 60)
                     } else {
-                        VStack(spacing: 24) {
-                            // Header with AI Assistant Button
-                            HStack {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("Your Progress")
-                                        .font(.system(size: 28, weight: .bold))
-                                        .foregroundColor(.white)
-                                    
-                                    if let ideaTitle = viewModel.selectedBusinessIdea?.title {
-                                        Text(ideaTitle)
-                                            .font(.system(size: 14, weight: .semibold))
-                                            .foregroundColor(.white.opacity(0.75))
-                                            .lineLimit(1)
-                                    } else {
-                                        Text("Business Blueprint")
-                                            .font(.system(size: 14))
-                                            .foregroundColor(.white.opacity(0.7))
-                                    }
-                                }
+                        VStack(spacing: ModernDesign.Spacing.lg) {
+                            // Header
+                            VStack(alignment: .leading, spacing: ModernDesign.Spacing.sm) {
+                                Text("Dashboard")
+                                    .font(Typography.title2)
+                                    .foregroundColor(AppColors.textPrimary)
                                 
-                                Spacer()
-                                
-                                Button {
-                                    showAIAssistant = true
-                                } label: {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "sparkles")
-                                        Text("AI")
-                                    }
-                                    .font(.subheadline.bold())
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 10)
-                                    .background(
-                                        LinearGradient(
-                                            colors: [.orange, .pink],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                    )
-                                    .cornerRadius(20)
+                                if let ideaTitle = viewModel.selectedBusinessIdea?.title {
+                                    Text(ideaTitle)
+                                        .font(Typography.calloutMedium)
+                                        .foregroundColor(AppColors.textSecondary)
+                                        .lineLimit(1)
                                 }
                             }
-                            .padding(20)
-                            
-                            // Overall Progress Card
-                            ProgressCard(
-                                title: "Overall Progress",
-                                percentage: viewModel.completionPercentage,
-                                icon: "chart.pie.fill"
-                            )
-                            .padding(.horizontal, 20)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(Edge.Set.horizontal, ModernDesign.Spacing.lg)
+                            .padding(.top, ModernDesign.Spacing.lg)
                             
                             // Stats Row
-                            HStack(spacing: 16) {
-                                StatBox(
+                            HStack(spacing: ModernDesign.Spacing.md) {
+                                SimpleStatCard(
                                     number: "\(viewModel.dailyGoals.count)",
-                                    label: "Total Goals",
-                                    icon: "checkmark.circle.fill"
+                                    label: "Goals",
+                                    icon: "checkmark.circle.fill",
+                                    color: AppColors.primary
                                 )
                                 
-                                StatBox(
+                                SimpleStatCard(
                                     number: "\(viewModel.completedGoalsCount)",
-                                    label: "Completed",
-                                    icon: "star.fill"
+                                    label: "Done",
+                                    icon: "star.fill",
+                                    color: AppColors.success
                                 )
                                 
-                                StatBox(
+                                SimpleStatCard(
                                     number: "\(viewModel.milestones.count)",
                                     label: "Milestones",
-                                    icon: "flag.fill"
+                                    icon: "flag.fill",
+                                    color: AppColors.secondary
                                 )
                             }
-                            .padding(.horizontal, 20)
+                            .padding(Edge.Set.horizontal, ModernDesign.Spacing.lg)
                             
-                            // Chart
-                            if !viewModel.milestones.isEmpty {
-                                MilestoneChartView(milestones: viewModel.milestones)
-                                    .padding(20)
-                                    .background(Color.white.opacity(0.05))
-                                    .cornerRadius(16)
-                                    .padding(.horizontal, 20)
-                            }
+                            // Overall Progress
+                            ProgressCardModern(
+                                percentage: viewModel.completionPercentage
+                            )
+                            .padding(Edge.Set.horizontal, ModernDesign.Spacing.lg)
                             
                             // Upcoming Goals
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("Upcoming Goals")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.white)
-                                
-                                if viewModel.upcomingGoals.isEmpty {
-                                    Text("No upcoming goals. Add one to get started!")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.white.opacity(0.5))
-                                } else {
-                                    ForEach(viewModel.upcomingGoals) { goal in
-                                        GoalRow(goal: goal, onToggle: {
-                                            viewModel.toggleGoalCompletion(goal.id)
-                                        })
+                            if !viewModel.upcomingGoals.isEmpty {
+                                VStack(alignment: .leading, spacing: ModernDesign.Spacing.md) {
+                                    Text("Upcoming Goals")
+                                        .font(Typography.headline)
+                                        .foregroundColor(AppColors.textPrimary)
+                                    
+                                    VStack(spacing: ModernDesign.Spacing.sm) {
+                                        ForEach(viewModel.upcomingGoals.prefix(3)) { goal in
+                                            GoalRowModern(goal: goal, onToggle: {
+                                                viewModel.toggleGoalCompletion(goal.id)
+                                            })
+                                        }
                                     }
                                 }
+                                .padding(ModernDesign.Spacing.lg)
+                                .cardStyle()
+                                .padding(Edge.Set.horizontal, ModernDesign.Spacing.lg)
                             }
-                            .padding(20)
-                            .background(Color.white.opacity(0.05))
-                            .cornerRadius(16)
-                            .padding(.horizontal, 20)
                             
-                            // Milestones List
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("Milestones")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.white)
-                                
-                                if viewModel.milestones.isEmpty {
-                                    Text("No milestones yet. Create your first one!")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.white.opacity(0.5))
-                                } else {
-                                    ForEach(viewModel.milestones.sorted { $0.order < $1.order }) { milestone in
-                                        MilestoneRow(milestone: milestone, onToggle: {
-                                            viewModel.toggleMilestoneCompletion(milestone.id)
-                                        })
+                            // Milestones
+                            if !viewModel.milestones.isEmpty {
+                                VStack(alignment: .leading, spacing: ModernDesign.Spacing.md) {
+                                    Text("Milestones")
+                                        .font(Typography.headline)
+                                        .foregroundColor(AppColors.textPrimary)
+                                    
+                                    VStack(spacing: ModernDesign.Spacing.sm) {
+                                        ForEach(viewModel.milestones.sorted { $0.order < $1.order }.prefix(4)) { milestone in
+                                            MilestoneRowModern(milestone: milestone, onToggle: {
+                                                viewModel.toggleMilestoneCompletion(milestone.id)
+                                            })
+                                        }
                                     }
                                 }
+                                .padding(ModernDesign.Spacing.lg)
+                                .cardStyle()
+                                .padding(Edge.Set.horizontal, ModernDesign.Spacing.lg)
                             }
-                            .padding(20)
-                            .background(Color.white.opacity(0.05))
-                            .cornerRadius(16)
-                            .padding(.horizontal, 20)
+                            
+                            Spacer().frame(height: ModernDesign.Spacing.lg)
                         }
-                        .padding(.vertical, 20)
                     }
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 12) {
+                    HStack(spacing: ModernDesign.Spacing.md) {
                         Button(action: { showAddGoal = true }) {
                             Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 18))
-                                .foregroundColor(Color(red: 1, green: 0.6, blue: 0.2))
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(AppColors.primary)
                         }
                         
-                        Button(action: { showAddMilestone = true }) {
-                            Image(systemName: "flag.circle.fill")
-                                .font(.system(size: 18))
-                                .foregroundColor(Color(red: 1, green: 0.6, blue: 0.2))
+                        Button(action: { showAIAssistant = true }) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(AppColors.secondary)
                         }
                     }
                 }
             }
         }
         .sheet(isPresented: $showAddGoal) {
-            AddGoalView(isPresented: $showAddGoal, onSave: { goal in
+            AddGoalViewModern(isPresented: $showAddGoal, onSave: { goal in
                 viewModel.addDailyGoal(goal)
             })
         }
         .sheet(isPresented: $showAddMilestone) {
-            AddMilestoneView(isPresented: $showAddMilestone, onSave: { milestone in
+            AddMilestoneViewModern(isPresented: $showAddMilestone, onSave: { milestone in
                 viewModel.addMilestone(milestone)
             })
         }
@@ -194,7 +147,6 @@ struct DashboardView: View {
             if let idea = viewModel.selectedBusinessIdea {
                 AIAssistantView(businessIdea: idea)
             } else {
-                // Provide a default business idea for demo
                 AIAssistantView(businessIdea: BusinessIdea(
                     id: UUID().uuidString,
                     title: "Your Business Journey",
@@ -237,206 +189,184 @@ struct DashboardView: View {
 
 struct DashboardEmptyState: View {
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "lightbulb")
+        VStack(spacing: ModernDesign.Spacing.lg) {
+            Image(systemName: "lightbulb.fill")
                 .font(.system(size: 54))
-                .foregroundColor(.white.opacity(0.6))
+                .foregroundColor(AppColors.primary)
             
-            Text("Create Your Blueprint")
-                .font(.system(size: 22, weight: .bold))
-                .foregroundColor(.white)
+            Text("Get Started")
+                .font(Typography.title3)
+                .foregroundColor(AppColors.textPrimary)
             
-            Text("Complete the AI quiz to unlock a personalized business dashboard, daily goals, and smart milestones.")
-                .font(.system(size: 14))
-                .foregroundColor(.white.opacity(0.65))
+            Text("Complete the AI quiz to unlock your personalized business dashboard")
+                .font(Typography.callout)
+                .foregroundColor(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
         }
         .frame(maxWidth: .infinity)
-        .padding(40)
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(20)
-        .padding(.horizontal, 24)
+        .padding(ModernDesign.Spacing.xl)
+        .cardStyle()
+        .padding(Edge.Set.horizontal, ModernDesign.Spacing.lg)
     }
 }
 
-struct ProgressCard: View {
-    let title: String
-    let percentage: Int
+struct SimpleStatCard: View {
+    let number: String
+    let label: String
     let icon: String
+    let color: Color
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: ModernDesign.Spacing.sm) {
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(color)
+            
+            Text(number)
+                .font(Typography.headline)
+                .foregroundColor(AppColors.textPrimary)
+            
+            Text(label)
+                .font(Typography.caption)
+                .foregroundColor(AppColors.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(ModernDesign.Spacing.md)
+        .background(color.opacity(0.08))
+        .cornerRadius(CornerRadius.lg)
+    }
+}
+
+struct ProgressCardModern: View {
+    let percentage: Int
+    
+    var body: some View {
+        VStack(spacing: ModernDesign.Spacing.md) {
             HStack {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(title)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.8))
+                VStack(alignment: .leading, spacing: ModernDesign.Spacing.xs) {
+                    Text("Progress")
+                        .font(Typography.calloutMedium)
+                        .foregroundColor(AppColors.textSecondary)
                     
                     Text("\(percentage)%")
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(.white)
+                        .font(Typography.title2)
+                        .foregroundColor(AppColors.textPrimary)
                 }
                 
                 Spacer()
                 
-                Image(systemName: icon)
-                    .font(.system(size: 40))
-                    .foregroundColor(Color(red: 1, green: 0.6, blue: 0.2))
+                Circle()
+                    .trim(from: 0, to: CGFloat(percentage) / 100)
+                    .stroke(AppColors.primaryGradient, lineWidth: 6)
+                    .frame(width: 60, height: 60)
+                    .overlay(
+                        Text("\(percentage)%")
+                            .font(Typography.caption)
+                            .foregroundColor(AppColors.textSecondary)
+                    )
             }
             
             ProgressView(value: Double(percentage), total: 100)
-                .tint(Color(red: 1, green: 0.6, blue: 0.2))
+                .tint(AppColors.primary)
         }
-        .padding(20)
-        .background(Color.white.opacity(0.08))
-        .cornerRadius(16)
+        .padding(ModernDesign.Spacing.lg)
+        .cardStyle()
     }
 }
 
-struct StatBox: View {
-    let number: String
-    let label: String
-    let icon: String
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 24))
-                .foregroundColor(Color(red: 1, green: 0.6, blue: 0.2))
-            
-            Text(number)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(.white)
-            
-            Text(label)
-                .font(.system(size: 12))
-                .foregroundColor(.white.opacity(0.7))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(16)
-        .background(Color.white.opacity(0.08))
-        .cornerRadius(12)
-    }
-}
-
-struct MilestoneChartView: View {
-    let milestones: [Milestone]
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Completion Timeline")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
-            
-            Chart {
-                ForEach(Array(milestones.enumerated()), id: \.element.id) { index, milestone in
-                    BarMark(
-                        x: .value("Milestone", String(milestone.title.prefix(10))),
-                        y: .value("Progress", milestone.completed ? 100 : 0)
-                    )
-                    .foregroundStyle(milestone.completed ? Color.green : Color.orange)
-                }
-            }
-            .chartYAxis(.hidden)
-            .frame(height: 200)
-        }
-    }
-}
-
-struct GoalRow: View {
+struct GoalRowModern: View {
     let goal: DailyGoal
     let onToggle: () -> Void
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: ModernDesign.Spacing.md) {
             Button(action: onToggle) {
                 Image(systemName: goal.completed ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20))
-                    .foregroundColor(goal.completed ? .green : .white.opacity(0.5))
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(goal.completed ? AppColors.success : AppColors.textTertiary)
             }
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: ModernDesign.Spacing.xs) {
                 Text(goal.title)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(Typography.bodySemibold)
+                    .foregroundColor(AppColors.textPrimary)
                     .strikethrough(goal.completed)
                 
                 Text(goal.dueDate.formatted(date: .abbreviated, time: .omitted))
-                    .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.5))
+                    .font(Typography.caption)
+                    .foregroundColor(AppColors.textTertiary)
             }
             
             Spacer()
             
-            PriorityBadge(priority: goal.priority)
+            HStack(spacing: ModernDesign.Spacing.sm) {
+                PriorityBadgeModern(priority: goal.priority)
+            }
         }
-        .padding(12)
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(10)
+        .padding(ModernDesign.Spacing.md)
+        .background(AppColors.surfaceLight)
+        .cornerRadius(CornerRadius.md)
     }
 }
 
-struct MilestoneRow: View {
+struct MilestoneRowModern: View {
     let milestone: Milestone
     let onToggle: () -> Void
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .top, spacing: ModernDesign.Spacing.md) {
             Button(action: onToggle) {
                 Image(systemName: milestone.completed ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20))
-                    .foregroundColor(milestone.completed ? .green : .white.opacity(0.5))
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(milestone.completed ? AppColors.success : AppColors.primary)
             }
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: ModernDesign.Spacing.xs) {
                 Text(milestone.title)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-                    .strikethrough(milestone.completed)
+                    .font(Typography.bodySemibold)
+                    .foregroundColor(AppColors.textPrimary)
                 
-                Text(milestone.dueDate.formatted(date: .abbreviated, time: .omitted))
-                    .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.5))
+                Text(milestone.description)
+                    .font(Typography.caption)
+                    .foregroundColor(AppColors.textSecondary)
+                    .lineLimit(2)
+                
+                Text("Due \(milestone.dueDate, style: .date)")
+                    .font(Typography.caption)
+                    .foregroundColor(AppColors.textTertiary)
             }
             
             Spacer()
-            
-            if milestone.completed {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.green)
-            }
         }
-        .padding(12)
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(10)
+        .padding(ModernDesign.Spacing.md)
+        .background(AppColors.surfaceLight)
+        .cornerRadius(CornerRadius.md)
     }
 }
 
-struct PriorityBadge: View {
+struct PriorityBadgeModern: View {
     let priority: String
     
     var color: Color {
         switch priority {
-        case "High": return .red
-        case "Medium": return .orange
-        default: return .green
+        case "High": return AppColors.danger
+        case "Medium": return AppColors.warning
+        default: return AppColors.success
         }
     }
     
     var body: some View {
         Text(priority)
-            .font(.system(size: 11, weight: .semibold))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(color.opacity(0.3))
-            .cornerRadius(6)
+            .font(Typography.caption)
+            .padding(Edge.Set.horizontal, ModernDesign.Spacing.sm)
+            .padding(.vertical, ModernDesign.Spacing.xs)
+            .background(color.opacity(0.1))
+            .cornerRadius(CornerRadius.sm)
             .foregroundColor(color)
     }
 }
 
-struct AddGoalView: View {
+struct AddGoalViewModern: View {
     @Binding var isPresented: Bool
     let onSave: (DailyGoal) -> Void
     @State private var title = ""
@@ -447,30 +377,49 @@ struct AddGoalView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 0.05, green: 0.15, blue: 0.35),
-                        Color(red: 0.1, green: 0.2, blue: 0.4)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                AppColors.background
+                    .ignoresSafeArea()
                 
-                VStack {
-                    Form {
-                        Section("Goal Details") {
-                            TextField("Title", text: $title)
-                            TextField("Description", text: $description)
-                            Picker("Priority", selection: $priority) {
-                                Text("Low").tag("Low")
-                                Text("Medium").tag("Medium")
-                                Text("High").tag("High")
-                            }
-                            DatePicker("Due Date", selection: $dueDate, displayedComponents: .date)
+                VStack(spacing: ModernDesign.Spacing.lg) {
+                    VStack(alignment: .leading, spacing: ModernDesign.Spacing.md) {
+                        Text("Goal Title")
+                            .font(Typography.calloutMedium)
+                            .foregroundColor(AppColors.textPrimary)
+                        
+                        TextField("Enter goal title", text: $title)
+                            .textFieldStyle(AppTextFieldStyle())
+                        
+                        Text("Description")
+                            .font(Typography.calloutMedium)
+                            .foregroundColor(AppColors.textPrimary)
+                            .padding(.top, ModernDesign.Spacing.md)
+                        
+                        TextField("Enter description", text: $description)
+                            .textFieldStyle(AppTextFieldStyle())
+                        
+                        Text("Priority")
+                            .font(Typography.calloutMedium)
+                            .foregroundColor(AppColors.textPrimary)
+                            .padding(.top, ModernDesign.Spacing.md)
+                        
+                        Picker("Priority", selection: $priority) {
+                            Text("Low").tag("Low")
+                            Text("Medium").tag("Medium")
+                            Text("High").tag("High")
                         }
+                        .pickerStyle(.segmented)
+                        
+                        Text("Due Date")
+                            .font(Typography.calloutMedium)
+                            .foregroundColor(AppColors.textPrimary)
+                            .padding(.top, ModernDesign.Spacing.md)
+                        
+                        DatePicker("", selection: $dueDate, displayedComponents: .date)
+                            .datePickerStyle(.graphical)
                     }
-                    .foregroundColor(.white)
+                    .padding(ModernDesign.Spacing.lg)
+                    
+                    Spacer()
                     
                     Button(action: {
                         let goal = DailyGoal(
@@ -487,30 +436,26 @@ struct AddGoalView: View {
                         onSave(goal)
                         isPresented = false
                     }) {
-                        Text("Save Goal")
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(Color(red: 1, green: 0.6, blue: 0.2))
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
+                        Text("Create Goal")
+                            .buttonStyle(PrimaryButtonStyle(isLoading: false))
                     }
-                    .padding(20)
                     .disabled(title.isEmpty)
+                    .padding(ModernDesign.Spacing.lg)
                 }
             }
-            .navigationTitle("Add Daily Goal")
+            .navigationTitle("Add Goal")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { isPresented = false }
-                        .foregroundColor(.white)
+                        .foregroundColor(AppColors.primary)
                 }
             }
         }
     }
 }
 
-struct AddMilestoneView: View {
+struct AddMilestoneViewModern: View {
     @Binding var isPresented: Bool
     let onSave: (Milestone) -> Void
     @State private var title = ""
@@ -520,25 +465,37 @@ struct AddMilestoneView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 0.05, green: 0.15, blue: 0.35),
-                        Color(red: 0.1, green: 0.2, blue: 0.4)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                AppColors.background
+                    .ignoresSafeArea()
                 
-                VStack {
-                    Form {
-                        Section("Milestone Details") {
-                            TextField("Title", text: $title)
-                            TextField("Description", text: $description)
-                            DatePicker("Due Date", selection: $dueDate, displayedComponents: .date)
-                        }
+                VStack(spacing: ModernDesign.Spacing.lg) {
+                    VStack(alignment: .leading, spacing: ModernDesign.Spacing.md) {
+                        Text("Milestone Title")
+                            .font(Typography.calloutMedium)
+                            .foregroundColor(AppColors.textPrimary)
+                        
+                        TextField("Enter milestone title", text: $title)
+                            .textFieldStyle(AppTextFieldStyle())
+                        
+                        Text("Description")
+                            .font(Typography.calloutMedium)
+                            .foregroundColor(AppColors.textPrimary)
+                            .padding(.top, ModernDesign.Spacing.md)
+                        
+                        TextField("Enter description", text: $description)
+                            .textFieldStyle(AppTextFieldStyle())
+                        
+                        Text("Due Date")
+                            .font(Typography.calloutMedium)
+                            .foregroundColor(AppColors.textPrimary)
+                            .padding(.top, ModernDesign.Spacing.md)
+                        
+                        DatePicker("", selection: $dueDate, displayedComponents: .date)
+                            .datePickerStyle(.graphical)
                     }
-                    .foregroundColor(.white)
+                    .padding(ModernDesign.Spacing.lg)
+                    
+                    Spacer()
                     
                     Button(action: {
                         let milestone = Milestone(
@@ -555,23 +512,19 @@ struct AddMilestoneView: View {
                         onSave(milestone)
                         isPresented = false
                     }) {
-                        Text("Save Milestone")
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(Color(red: 1, green: 0.6, blue: 0.2))
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
+                        Text("Create Milestone")
+                            .buttonStyle(PrimaryButtonStyle(isLoading: false))
                     }
-                    .padding(20)
                     .disabled(title.isEmpty)
+                    .padding(ModernDesign.Spacing.lg)
                 }
             }
             .navigationTitle("Add Milestone")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { isPresented = false }
-                        .foregroundColor(.white)
+                        .foregroundColor(AppColors.primary)
                 }
             }
         }

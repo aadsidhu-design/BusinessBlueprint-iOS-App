@@ -10,106 +10,134 @@ struct AuthView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 0.05, green: 0.15, blue: 0.35),
-                        Color(red: 0.1, green: 0.2, blue: 0.4)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                AppColors.backgroundGradient
+                    .ignoresSafeArea()
                 
-                VStack(spacing: 0) {
-                    HStack {
-                        Button(action: { dismiss() }) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
-                        }
+                ScrollView {
+                    VStack(spacing: 32) {
                         Spacer()
-                    }
-                    .padding(20)
-                    
-                    VStack(spacing: 24) {
-                        Text(isSignUp ? "Create Account" : "Welcome Back")
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(.white)
+                            .frame(height: 40)
                         
-                        VStack(spacing: 16) {
-                            TextField("Email", text: $email)
-                                .textContentType(.emailAddress)
-                                .keyboardType(.emailAddress)
-                                .padding(14)
-                                .background(Color.white.opacity(0.1))
-                                .cornerRadius(12)
-                                .foregroundColor(.white)
+                        // Header
+                        VStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [AppColors.primaryOrange.opacity(0.2), AppColors.primaryPink.opacity(0.2)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 100, height: 100)
+                                
+                                Image(systemName: isSignUp ? "person.badge.plus.fill" : "person.circle.fill")
+                                    .font(.system(size: 50))
+                                    .foregroundStyle(AppColors.primaryGradient)
+                            }
+                            .bounceEntrance()
                             
-                            SecureField("Password", text: $password)
-                                .textContentType(.password)
-                                .padding(14)
-                                .background(Color.white.opacity(0.1))
-                                .cornerRadius(12)
-                                .foregroundColor(.white)
+                            Text(isSignUp ? "Create Account" : "Welcome Back")
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .fadeInUp(delay: 0.1)
+                            
+                            Text(isSignUp ? "Start your entrepreneurial journey" : "Continue where you left off")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .fadeInUp(delay: 0.2)
                         }
                         
-                        if let error = viewModel.errorMessage {
-                            Text(error)
-                                .font(.system(size: 12, weight: .regular))
-                                .foregroundColor(.red)
-                        }
-                        
-                        Button(action: {
-                            if isSignUp {
-                                viewModel.signUp(email: email, password: password)
-                            } else {
-                                viewModel.signIn(email: email, password: password)
-                            }
-                        }) {
-                            if viewModel.isLoading {
-                                ProgressView()
-                                    .tint(.white)
-                            } else {
-                                Text(isSignUp ? "Sign Up" : "Sign In")
-                                    .font(.system(size: 16, weight: .semibold))
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color(red: 1, green: 0.6, blue: 0.2),
-                                    Color(red: 1, green: 0.4, blue: 0.1)
-                                ]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                        // Form
+                        VStack(spacing: 20) {
+                            ModernTextField(
+                                title: "Email",
+                                text: $email,
+                                placeholder: "you@example.com",
+                                icon: "envelope.fill"
                             )
-                        )
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                        .disabled(email.isEmpty || password.isEmpty || viewModel.isLoading)
-                        .onChange(of: viewModel.isLoggedIn) { _, newValue in
-                            if newValue {
-                                dismiss()
+                            .fadeInUp(delay: 0.3)
+                            
+                            ModernTextField(
+                                title: "Password",
+                                text: $password,
+                                placeholder: "Enter your password",
+                                isSecure: true,
+                                icon: "lock.fill"
+                            )
+                            .fadeInUp(delay: 0.4)
+                            
+                            if let error = viewModel.errorMessage {
+                                ModernCard(
+                                    borderColor: .red.opacity(0.5),
+                                    padding: 12
+                                ) {
+                                    HStack {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .foregroundColor(.red)
+                                        Text(error)
+                                            .font(.caption)
+                                            .foregroundColor(.red)
+                                    }
+                                }
+                                .fadeInUp()
                             }
                         }
-                    }
-                    .padding(.horizontal, 20)
-                    
-                    HStack {
-                        Text(isSignUp ? "Already have an account?" : "Don't have an account?")
-                            .foregroundColor(.white.opacity(0.7))
-                        Button(action: { isSignUp.toggle() }) {
-                            Text(isSignUp ? "Sign In" : "Sign Up")
-                                .fontWeight(.semibold)
-                                .foregroundColor(.yellow)
+                        .padding(.horizontal, 24)
+                        
+                        // Action Button
+                        VStack(spacing: 16) {
+                            PlayfulButton(
+                                title: isSignUp ? "Create Account" : "Sign In",
+                                icon: isSignUp ? "person.badge.plus.fill" : "arrow.right.circle.fill",
+                                gradient: AppColors.primaryGradient,
+                                isLoading: viewModel.isLoading,
+                                disabled: email.isEmpty || password.isEmpty
+                            ) {
+                                if isSignUp {
+                                    viewModel.signUp(email: email, password: password)
+                                } else {
+                                    viewModel.signIn(email: email, password: password)
+                                }
+                            }
+                            .fadeInUp(delay: 0.5)
+                            
+                            Button {
+                                isSignUp.toggle()
+                            } label: {
+                                HStack {
+                                    Text(isSignUp ? "Already have an account?" : "Don't have an account?")
+                                        .foregroundColor(.secondary)
+                                    Text(isSignUp ? "Sign In" : "Sign Up")
+                                        .foregroundColor(AppColors.primaryOrange)
+                                        .fontWeight(.semibold)
+                                }
+                                .font(.subheadline)
+                            }
+                            .fadeInUp(delay: 0.6)
                         }
+                        .padding(.horizontal, 24)
+                        
+                        Spacer()
+                            .frame(height: 40)
                     }
-                    .font(.system(size: 14))
-                    .padding(.top, 20)
-                    
-                    Spacer()
+                }
+            }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                            .font(.title3)
+                    }
+                }
+            }
+            .onChange(of: viewModel.isLoggedIn) { _, newValue in
+                if newValue {
+                    dismiss()
                 }
             }
         }

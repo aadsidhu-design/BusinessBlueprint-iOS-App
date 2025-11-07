@@ -6,35 +6,49 @@ import Foundation
 // Never commit API keys to version control
 
 struct Config {
-    /// Google AI API Key - Set via environment variable
-    /// In Xcode: Edit Scheme → Run → Pre-actions → Add user-defined setting
-    /// Or set: export GOOGLE_AI_API_KEY="your_key_here"
-    static let googleAIKey: String = {
+    /// Google AI API Key - Read from UserDefaults, env, or Info.plist
+    /// Set via Settings screen, environment, or Info.plist
+    static var googleAIKey: String {
+        if let saved = UserDefaults.standard.string(forKey: "GOOGLE_AI_API_KEY"), !saved.isEmpty {
+            return saved
+        }
         if let key = ProcessInfo.processInfo.environment["GOOGLE_AI_API_KEY"], !key.isEmpty {
             return key
         }
-        // Fallback: Load from Info.plist if available
         if let key = Bundle.main.infoDictionary?["GOOGLE_AI_API_KEY"] as? String, !key.isEmpty {
             return key
         }
-        // ⚠️ TEMPORARY: Hardcoded key for development
-        // TODO: Move to secure environment variable or Xcode build settings before production
-        return "AIzaSyDwtGElGSno15x83lQvgSvsaTIX98ca4A4"
-    }()
+        // Fallback to pre-configured key
+        return "AIzaSyAy23CL7PUMQ-KSpdJUvmWV1XMq8p_7-7Q"
+    }
+
+    /// Google AI model identifier - override via Settings, env or Info.plist
+    static var googleAIModel: String {
+        if let saved = UserDefaults.standard.string(forKey: "GOOGLE_AI_MODEL"), !saved.isEmpty {
+            return saved
+        }
+        if let model = ProcessInfo.processInfo.environment["GOOGLE_AI_MODEL"], !model.isEmpty {
+            return model
+        }
+        if let model = Bundle.main.infoDictionary?["GOOGLE_AI_MODEL"] as? String, !model.isEmpty {
+            return model
+        }
+        return "gemini-2.0-flash-exp" // Updated to faster model
+    }
     
     /// Firebase Project Configuration
     /// These are public identifiers safe to commit
-    static let firebaseProjectID = "studio-5837146656-10acf"
-    static let firebaseProjectNumber = "1095936176351"
+    static let firebaseProjectID = "businessapp-b9a38"
+    static let firebaseProjectNumber = "375175320585"
+    static let firebaseStorageBucket = "businessapp-b9a38.firebasestorage.app"
     
-    /// Firebase Web API Key - Load from Info.plist
-    /// This should be added to Info.plist from a secure config file (not in git)
-    static let firebaseWebAPIKey: String = {
-        if let key = Bundle.main.infoDictionary?["FIREBASE_WEB_API_KEY"] as? String {
+    /// Firebase Web API Key - Load from Info.plist or env
+    static var firebaseWebAPIKey: String {
+        if let key = Bundle.main.infoDictionary?["FIREBASE_WEB_API_KEY"] as? String, !key.isEmpty {
             return key
         }
         return ProcessInfo.processInfo.environment["FIREBASE_WEB_API_KEY"] ?? ""
-    }()
+    }
     
     /// App Settings
     static let appName = "BusinessIdea"

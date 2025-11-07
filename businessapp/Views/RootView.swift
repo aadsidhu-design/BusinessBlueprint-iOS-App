@@ -7,7 +7,7 @@ struct RootView: View {
     var body: some View {
         Group {
             if businessPlanStore.quizCompleted {
-                MainTabView()
+                MainTabViewNew()
             } else {
                 QuizView()
             }

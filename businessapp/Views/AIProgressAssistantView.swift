@@ -2,89 +2,144 @@ import SwiftUI
 
 struct AIProgressAssistantView: View {
     @ObservedObject var viewModel: IslandTimelineViewModel
+    let showsCloseButton: Bool
     @State private var userQuestion = ""
-    @State private var messages: [ChatMessage] = []
+    @State private var messages: [OldChatMessage] = []
     @State private var isLoading = false
+    @State private var errorMessage: String?
     @Environment(\.dismiss) private var dismiss
+
+    init(viewModel: IslandTimelineViewModel, showsCloseButton: Bool = true) {
+        self._viewModel = ObservedObject(initialValue: viewModel)
+        self.showsCloseButton = showsCloseButton
+    }
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // Background
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.1, green: 0.1, blue: 0.2),
-                        Color(red: 0.2, green: 0.1, blue: 0.3)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+        ZStack {
+            AppColors.backgroundGradient
                 .ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    // Chat Messages
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            VStack(spacing: 16) {
-                                // Welcome message
-                                if messages.isEmpty {
-                                    WelcomeMessageView()
-                                        .padding()
-                                }
-                                
-                                // Messages
-                                ForEach(messages) { message in
-                                    MessageBubble(message: message)
-                                        .id(message.id)
-                                }
-                                
-                                // Loading indicator
-                                if isLoading {
-                                    HStack {
-                                        ProgressView()
-                                            .tint(.white)
-                                        Text("Thinking...")
-                                            .foregroundColor(.white.opacity(0.7))
+            
+            VStack(spacing: 0) {
+                // Messages
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            if messages.isEmpty {
+                                ModernCard(
+                                    gradient: AppColors.vibrantGradient,
+                                    padding: 32
+                                ) {
+                                    VStack(spacing: 16) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(Color.white.opacity(0.25))
+                                                .frame(width: 80, height: 80)
+                                            
+                                            Image(systemName: "sparkles")
+                                                .font(.system(size: 40))
+                                                .foregroundColor(.white)
+                                        }
+                                        
+                                        Text("Your AI Business Guide")
+                                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                                            .foregroundColor(.white)
+                                        
+                                        Text("I'm here to help you navigate your journey! Ask me anything about your progress, goals, or next steps.")
+                                            .font(.body)
+                                            .foregroundColor(.white.opacity(0.9))
+                                            .multilineTextAlignment(.center)
                                     }
-                                    .padding()
                                 }
+                                .padding()
+                                .bounceEntrance()
                             }
-                            .padding()
-                        }
-                        .onChange(of: messages.count) { _ in
-                            if let lastMessage = messages.last {
-                                withAnimation {
-                                    proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            
+                            ForEach(messages) { message in
+                                OldMessageBubble(message: message)
+                                    .id(message.id)
+                                    .fadeInUp()
+                            }
+                            
+                            if isLoading {
+                                HStack {
+                                    ProgressView()
+                                        .tint(AppColors.primaryOrange)
+                                    Text("Thinking...")
+                                        .foregroundColor(.secondary)
                                 }
+                                .padding()
+                            }
+                        }
+                        .padding()
+                    }
+                    .onChange(of: messages.count) {
+                        if let lastMessage = messages.last {
+                            withAnimation {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
                             }
                         }
                     }
-                    
-                    // Quick Actions
-                    QuickActionsView(onAction: { action in
-                        sendMessage(action)
-                    })
-                    .padding(.horizontal)
-                    
-                    // Input Area
-                    MessageInputView(
-                        text: $userQuestion,
-                        isLoading: isLoading,
-                        onSend: {
-                            sendMessage(userQuestion)
+                }
+                
+                // Quick Actions
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        QuickActionChip(icon: "chart.line.uptrend.xyaxis", text: "Show my progress", color: AppColors.primaryOrange) {
+                            sendMessage("Show my progress")
                         }
-                    )
+                        QuickActionChip(icon: "lightbulb.fill", text: "Give me a tip", color: AppColors.brightBlue) {
+                            sendMessage("Give me a tip")
+                        }
+                        QuickActionChip(icon: "flag.fill", text: "What's next?", color: AppColors.duolingoGreen) {
+                            sendMessage("What's next?")
+                        }
+                        QuickActionChip(icon: "target", text: "Set a new goal", color: AppColors.primaryPink) {
+                            sendMessage("Set a new goal")
+                        }
+                    }
                     .padding()
                 }
+                
+                // Input Area
+                HStack(spacing: 12) {
+                    TextField("Ask me anything...", text: $userQuestion, axis: .vertical)
+                        .textFieldStyle(.roundedBorder)
+                        .lineLimit(1...4)
+                        .disabled(isLoading)
+                    
+                    Button {
+                        sendMessage(userQuestion)
+                    } label: {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(userQuestion.isEmpty ? .gray : AppColors.primaryOrange)
+                    }
+                    .disabled(userQuestion.isEmpty || isLoading)
+                }
+                .padding()
+                .background(Color(.systemGray6))
             }
-            .navigationTitle("AI Guide")
+            .navigationTitle(showsCloseButton ? "AI Guide" : "AI Coach")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
+                if showsCloseButton {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Done") {
+                            dismiss()
+                        }
                     }
-                    .foregroundColor(.white)
+                }
+            }
+            .alert("AI Service", isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Button("OK") {
+                    errorMessage = nil
+                }
+            } message: {
+                if let error = errorMessage {
+                    Text(error)
                 }
             }
         }
@@ -93,164 +148,104 @@ struct AIProgressAssistantView: View {
     private func sendMessage(_ text: String) {
         guard !text.isEmpty, !isLoading else { return }
         
-        // Add user message
-        let userMessage = ChatMessage(content: text, isFromUser: true)
+        let userMessage = OldChatMessage(content: text, isFromUser: true)
         messages.append(userMessage)
         userQuestion = ""
         isLoading = true
+        HapticManager.shared.trigger(.light)
         
-        // Get AI response
         viewModel.askAIAboutProgress(question: text) { response in
-            isLoading = false
-            let aiMessage = ChatMessage(content: response, isFromUser: false)
-            messages.append(aiMessage)
+            DispatchQueue.main.async {
+                self.isLoading = false
+                let aiMessage = OldChatMessage(content: response, isFromUser: false)
+                self.messages.append(aiMessage)
+                
+                if response.contains("⚠️") || response.contains("not configured") || response.contains("trouble connecting") {
+                    self.errorMessage = response
+                }
+            }
         }
     }
 }
 
-// MARK: - Chat Message Model
-struct ChatMessage: Identifiable {
+struct OldChatMessage: Identifiable {
     let id = UUID()
     let content: String
     let isFromUser: Bool
     let timestamp = Date()
 }
 
-// MARK: - Welcome Message
-struct WelcomeMessageView: View {
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 60))
-                .foregroundColor(.yellow)
-            
-            Text("Your AI Business Guide")
-                .font(.title2.bold())
-                .foregroundColor(.white)
-            
-            Text("I'm here to help you navigate your journey! Ask me anything about your progress, goals, or next steps.")
-                .font(.body)
-                .foregroundColor(.white.opacity(0.8))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.ultraThinMaterial)
-        )
-    }
-}
-
-// MARK: - Message Bubble
-struct MessageBubble: View {
-    let message: ChatMessage
+private struct OldMessageBubble: View {
+    let message: OldChatMessage
     
     var body: some View {
         HStack {
-            if message.isFromUser { Spacer() }
+            if message.isFromUser { Spacer(minLength: 60) }
             
             VStack(alignment: message.isFromUser ? .trailing : .leading, spacing: 4) {
                 Text(message.content)
                     .font(.body)
-                    .foregroundColor(message.isFromUser ? .white : .black)
-                    .padding(12)
+                    .foregroundColor(message.isFromUser ? .white : .primary)
+                    .padding(16)
                     .background(
-                        message.isFromUser ?
-                        LinearGradient(
-                            colors: [.blue, .purple],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ) :
-                        LinearGradient(
-                            colors: [.white, .white],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .cornerRadius(16)
-                
-                Text(message.timestamp.formatted(date: .omitted, time: .shortened))
-                    .font(.caption2)
-                    .foregroundColor(.white.opacity(0.6))
-            }
-            
-            if !message.isFromUser { Spacer() }
-        }
-    }
-}
-
-// MARK: - Quick Actions
-struct QuickActionsView: View {
-    let onAction: (String) -> Void
-    
-    let quickActions = [
-        ("chart.line.uptrend.xyaxis", "Show my progress"),
-        ("lightbulb.fill", "Give me a tip"),
-        ("flag.fill", "What's next?"),
-        ("target", "Set a new goal")
-    ]
-    
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                ForEach(quickActions, id: \.0) { icon, text in
-                    Button {
-                        onAction(text)
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: icon)
-                            Text(text)
-                                .font(.caption)
+                        Group {
+                            if message.isFromUser {
+                                AppColors.blueGradient
+                            } else {
+                                Color(.systemGray5)
+                            }
                         }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            Capsule()
-                                .fill(.ultraThinMaterial)
-                        )
-                    }
-                }
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                
+                Text(message.timestamp, style: .time)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             }
-            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: message.isFromUser ? .trailing : .leading)
+            .padding(.horizontal)
+            
+            if !message.isFromUser { Spacer(minLength: 60) }
         }
     }
 }
 
-// MARK: - Message Input
-struct MessageInputView: View {
-    @Binding var text: String
-    let isLoading: Bool
-    let onSend: () -> Void
+private struct QuickActionChip: View {
+    let icon: String
+    let text: String
+    let color: Color
+    let action: () -> Void
+    
+    @State private var isPressed = false
     
     var body: some View {
-        HStack(spacing: 12) {
-            TextField("Ask me anything...", text: $text)
-                .textFieldStyle(.plain)
-                .foregroundColor(.white)
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(.ultraThinMaterial)
-                )
-                .disabled(isLoading)
-            
-            Button {
-                onSend()
-            } label: {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 32))
-                    .foregroundColor(text.isEmpty ? .gray : .blue)
+        Button {
+            action()
+            HapticManager.shared.trigger(.light)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.caption)
+                Text(text)
+                    .font(.caption)
+                    .fontWeight(.medium)
             }
-            .disabled(text.isEmpty || isLoading)
+            .foregroundColor(color)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(color.opacity(0.15))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(color.opacity(0.3), lineWidth: 1)
+            )
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 25)
-                .fill(Color.black.opacity(0.3))
-        )
+        .buttonStyle(.plain)
+        .scaleEffect(isPressed ? 0.95 : 1.0)
+        .animation(AnimationHelpers.buttonPress, value: isPressed)
+        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+            isPressed = pressing
+        }, perform: {})
     }
 }
 

@@ -102,7 +102,11 @@ class DashboardViewModel: ObservableObject {
         }
         
         group.enter()
-        FirebaseService.shared.fetchMilestones(businessIdeaId: businessIdeaId) { [weak self] result in
+        guard let userId = userId else {
+            group.leave()
+            return
+        }
+        FirebaseService.shared.fetchMilestones(userId: userId) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let milestones):

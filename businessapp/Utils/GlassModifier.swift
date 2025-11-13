@@ -11,9 +11,21 @@ enum GlassStyle {
     case button
     case navigation
     case overlay
+    case appleWhite  // New Apple-style white glass
     
     var config: GlassConfig {
         switch self {
+        case .appleWhite:
+            return GlassConfig(
+                cornerRadius: 20,
+                backgroundOpacity: 0.95,
+                borderOpacity: 0.2,
+                shadowOpacity: 0.1,
+                padding: 20,
+                shadowRadius: 10,
+                shadowOffset: CGSize(width: 0, height: 2),
+                useWhiteGlass: true
+            )
         case .standard:
             return GlassConfig(
                 cornerRadius: 28,
@@ -22,7 +34,8 @@ enum GlassStyle {
                 shadowOpacity: 0.35,
                 padding: 20,
                 shadowRadius: 28,
-                shadowOffset: CGSize(width: 0, height: 18)
+                shadowOffset: CGSize(width: 0, height: 18),
+                useWhiteGlass: false
             )
         case .compact:
             return GlassConfig(
@@ -32,7 +45,8 @@ enum GlassStyle {
                 shadowOpacity: 0.25,
                 padding: 12,
                 shadowRadius: 16,
-                shadowOffset: CGSize(width: 0, height: 8)
+                shadowOffset: CGSize(width: 0, height: 8),
+                useWhiteGlass: false
             )
         case .prominent:
             return GlassConfig(
@@ -42,7 +56,8 @@ enum GlassStyle {
                 shadowOpacity: 0.45,
                 padding: 24,
                 shadowRadius: 40,
-                shadowOffset: CGSize(width: 0, height: 24)
+                shadowOffset: CGSize(width: 0, height: 24),
+                useWhiteGlass: false
             )
         case .subtle:
             return GlassConfig(
@@ -52,7 +67,8 @@ enum GlassStyle {
                 shadowOpacity: 0.15,
                 padding: 16,
                 shadowRadius: 12,
-                shadowOffset: CGSize(width: 0, height: 4)
+                shadowOffset: CGSize(width: 0, height: 4),
+                useWhiteGlass: false
             )
         case .card:
             return GlassConfig(
@@ -62,7 +78,8 @@ enum GlassStyle {
                 shadowOpacity: 0.3,
                 padding: 18,
                 shadowRadius: 24,
-                shadowOffset: CGSize(width: 0, height: 12)
+                shadowOffset: CGSize(width: 0, height: 12),
+                useWhiteGlass: false
             )
         case .button:
             return GlassConfig(
@@ -72,7 +89,8 @@ enum GlassStyle {
                 shadowOpacity: 0.2,
                 padding: 8,
                 shadowRadius: 8,
-                shadowOffset: CGSize(width: 0, height: 2)
+                shadowOffset: CGSize(width: 0, height: 2),
+                useWhiteGlass: false
             )
         case .navigation:
             return GlassConfig(
@@ -82,7 +100,8 @@ enum GlassStyle {
                 shadowOpacity: 0.4,
                 padding: 14,
                 shadowRadius: 32,
-                shadowOffset: CGSize(width: 0, height: 16)
+                shadowOffset: CGSize(width: 0, height: 16),
+                useWhiteGlass: false
             )
         case .overlay:
             return GlassConfig(
@@ -92,7 +111,8 @@ enum GlassStyle {
                 shadowOpacity: 0.5,
                 padding: 20,
                 shadowRadius: 36,
-                shadowOffset: CGSize(width: 0, height: 20)
+                shadowOffset: CGSize(width: 0, height: 20),
+                useWhiteGlass: false
             )
         }
     }
@@ -106,6 +126,7 @@ struct GlassConfig {
     let padding: CGFloat
     let shadowRadius: CGFloat
     let shadowOffset: CGSize
+    let useWhiteGlass: Bool
 }
 
 struct GlassModifier: ViewModifier {
@@ -122,7 +143,8 @@ struct GlassModifier: ViewModifier {
         shadowOpacity: Double = 0.35,
         padding: CGFloat = 20,
         shadowRadius: CGFloat = 28,
-        shadowOffset: CGSize = CGSize(width: 0, height: 18)
+        shadowOffset: CGSize = CGSize(width: 0, height: 18),
+        useWhiteGlass: Bool = false
     ) {
         self.config = GlassConfig(
             cornerRadius: cornerRadius,
@@ -131,7 +153,8 @@ struct GlassModifier: ViewModifier {
             shadowOpacity: shadowOpacity,
             padding: padding,
             shadowRadius: shadowRadius,
-            shadowOffset: shadowOffset
+            shadowOffset: shadowOffset,
+            useWhiteGlass: useWhiteGlass
         )
     }
     
@@ -142,39 +165,61 @@ struct GlassModifier: ViewModifier {
         content
             .padding(config.padding)
             .background {
-                ZStack {
-                    // Base glass effect
-                    shape
-                        .fill(.ultraThinMaterial, style: FillStyle())
-                        .opacity(config.backgroundOpacity)
-                    
-                    // Enhanced frosted effect
-                    shape
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.white.opacity(0.25),
-                                    Color.white.opacity(0.1),
-                                    Color.clear
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                if config.useWhiteGlass {
+                    // Apple-style white glass
+                    ZStack {
+                        shape
+                            .fill(Color.white.opacity(config.backgroundOpacity))
+                        
+                        shape
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.1),
+                                        Color.white.opacity(0.05)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
-                        )
+                    }
+                } else {
+                    // Original dark glass effect
+                    ZStack {
+                        shape
+                            .fill(.ultraThinMaterial, style: FillStyle())
+                            .opacity(config.backgroundOpacity)
+                        
+                        shape
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.25),
+                                        Color.white.opacity(0.1),
+                                        Color.clear
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    }
                 }
             }
             .overlay(
                 shape
                     .stroke(
                         LinearGradient(
-                            colors: [
+                            colors: config.useWhiteGlass ? [
+                                Color.gray.opacity(config.borderOpacity),
+                                Color.gray.opacity(config.borderOpacity * 0.5)
+                            ] : [
                                 Color.white.opacity(config.borderOpacity),
                                 Color.white.opacity(config.borderOpacity * 0.5)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: 1
+                        lineWidth: config.useWhiteGlass ? 0.5 : 1
                     )
             )
             .shadow(

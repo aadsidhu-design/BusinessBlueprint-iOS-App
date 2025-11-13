@@ -57,21 +57,28 @@ struct AnimatedBottomBar<LeadingAction: View, TrailingAction: View, MainAction: 
                     ZStack {
                         HighlightingBackgroundView()
                         shape
-                            .fill(.bar)
-                            .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 5)
-                            .shadow(color: .black.opacity(0.1), radius: 15, x: 0, y: -5)
+                            .fill(Color.white)
+                            .overlay(
+                                shape
+                                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                     }
+                    .clipShape(shape)
                 }
                 
                 mainAction()
                     .frame(width: 50, height: 50)
-                    .clipShape(.circle)
                     .background {
                         Circle()
-                            .fill(.bar)
-                            .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 5)
-                            .shadow(color: .black.opacity(0.1), radius: 15, x: 0, y: -5)
+                            .fill(Color.white)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                     }
+                    .clipShape(.circle)
                     .modifier(MainActionOffsetModifier(isFocused: isFocused))
             }
         }

@@ -53,7 +53,7 @@ struct OnboardingQuestionaireView: View {
                         SpeechBubble(cornerRadius: 20, isBottom: false, pointLocation: 20)
                             .fill(.green)
                         
-                        Text(viewModel.question.query)  // Question
+                        Text(viewModel.question.text)  // Question
                             .font(.system(size: 20))
                             .bold()
                             .foregroundStyle(.white)
@@ -73,7 +73,7 @@ struct OnboardingQuestionaireView: View {
                 
                 ScrollView {  // Answer cards
                     LazyVStack {
-                        ForEach(0..<viewModel.question.answerText.count, id: \.self) { i in
+                        ForEach(0..<viewModel.question.options.count, id: \.self) { i in
                             SelectionCardView(question: $viewModel.question, selectedEntry: $selectedEntry, queryIndex: index, selectedIndex: i)
                         }
                     }
@@ -87,7 +87,7 @@ struct OnboardingQuestionaireView: View {
                         viewModel.getQuestionAtIndex(index: index)
                         
                         // Initialize selectedEntry array for new question
-                        selectedEntry = Array(repeating: false, count: StaticQuestions.questions[index].answerText.count)
+                        selectedEntry = Array(repeating: false, count: StaticQuestions.questions[index].options.count)
                         
                         progress = CGFloat(index + 1) / CGFloat(StaticQuestions.questions.count)
                     } else {
@@ -111,7 +111,7 @@ struct OnboardingQuestionaireView: View {
         .navigationBarBackButtonHidden(true)
         .onAppear {
             // Initialize selectedEntry for first question
-            selectedEntry = Array(repeating: false, count: viewModel.question.answerText.count)
+            selectedEntry = Array(repeating: false, count: viewModel.question.options.count)
         }
     }
     

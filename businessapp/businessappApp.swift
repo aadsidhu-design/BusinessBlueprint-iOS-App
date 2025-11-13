@@ -31,7 +31,7 @@ struct businessappApp: App {
             ContentView()
                 .environmentObject(authVM)
                 .environmentObject(businessPlanStore)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(.light)
         }
     }
 }

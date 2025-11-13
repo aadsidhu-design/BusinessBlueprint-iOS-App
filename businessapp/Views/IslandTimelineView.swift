@@ -4,147 +4,42 @@ struct IslandTimelineView: View {
     @StateObject private var viewModel = IslandTimelineViewModel()
     @EnvironmentObject private var businessPlanStore: BusinessPlanStore
     @State private var selectedIsland: Island?
-    @State private var showAIChat = false
+    
+    // Milestone data matching the image design
+    private let milestones = [
+        ("Idea", "lightbulb.fill"),
+        ("Research", "magnifyingglass"),
+        ("Plan", "doc.text.fill"),
+        ("Funding", "dollarsign.circle.fill"),
+        ("Launch", "rocket.fill"),
+        ("Growth", "chart.line.uptrend.xyaxis")
+    ]
     
     var body: some View {
-        ZStack {
-            AppColors.backgroundGradient
-                .ignoresSafeArea()
-            
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Header Card
-                    ModernCard(
-                        gradient: AppColors.vibrantGradient,
-                        padding: 24
-                    ) {
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text(currentJourneyTitle)
-                                .font(.system(size: 28, weight: .bold, design: .rounded))
-                                .foregroundColor(.white)
-                            
-                            Text(currentStageTitle)
-                                .font(.headline)
-                                .foregroundColor(.white.opacity(0.9))
-                            
-                            if completionRate > 0 {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    HStack {
-                                        Text("Progress")
-                                            .font(.caption)
-                                            .foregroundColor(.white.opacity(0.8))
-                                        Spacer()
-                                        Text("\(Int(completionRate * 100))%")
-                                            .font(.caption.bold())
-                                            .foregroundColor(.white)
-                                    }
-                                    ProgressView(value: completionRate)
-                                        .tint(.white)
-                                        .scaleEffect(y: 2)
-                                }
-                            }
-                        }
-                    }
-                    .fadeInUp()
-                    
-                    // Islands Timeline
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Journey Stages")
-                            .font(.headline)
-                            .padding(.horizontal, 24)
+        NavigationStack {
+            ZStack {
+                // Clean white background
+                Color.white
+                    .ignoresSafeArea()
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        // Header
+                        headerSection
+                            .padding(.top, 20)
+                            .padding(.bottom, 60)
                         
-                            ForEach(Array(viewModel.islands.enumerated()), id: \.element.id) { index, island in
-                            IslandCardRow(
-                                        island: island,
-                                        index: index,
-                                isCurrent: index == viewModel.currentIslandIndex,
-                                isCompleted: island.isCompleted || viewModel.journeyProgress.completedIslandIds.contains(island.id),
-                                isLocked: index > viewModel.currentIslandIndex
-                            ) {
-                                if !isLocked(index) {
-                                            selectedIsland = island
-                                }
-                            }
-                            .padding(.horizontal, 24)
-                            .fadeInUp(delay: Double(index) * 0.1)
-                        }
+                        // Timeline with curved path
+                        timelineView
+                            .padding(.horizontal, 40)
+                            .padding(.bottom, 100)
                     }
-                    
-                    // Progress Summary
-                    if !viewModel.islands.isEmpty {
-                        ModernCard(padding: 20) {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Completed")
-                                        .font(.headline)
-                                    Text("\(completedCount) of \(viewModel.islands.count) stages")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                                
-                                AnimatedProgressRing(
-                                    progress: completionRate,
-                                    gradient: AppColors.successGradient,
-                                    size: 60
-                                )
-                            }
-                        }
-                        .padding(.horizontal, 24)
-                        .fadeInUp()
-                    }
-                    
-                    // AI Assistant Button
-                    ModernCard(
-                        borderColor: AppColors.primaryOrange.opacity(0.5),
-                        padding: 20
-                    ) {
-                        Button {
-                            showAIChat = true
-                            HapticManager.shared.trigger(.light)
-                        } label: {
-                            HStack {
-                                ZStack {
-                                    Circle()
-                                        .fill(AppColors.primaryOrange.opacity(0.15))
-                                        .frame(width: 50, height: 50)
-                                    
-                                    Image(systemName: "message.fill")
-                                        .font(.title3)
-                                        .foregroundColor(AppColors.primaryOrange)
-                                }
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Ask AI Guide")
-                                        .font(.headline)
-                                    Text("Get personalized help")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.horizontal, 24)
-                    .fadeInUp()
-                    
-                    Spacer()
-                        .frame(height: 40)
                 }
-                .padding(.vertical, 16)
             }
+            .navigationBarHidden(true)
         }
-        .navigationTitle("Journey")
-        .navigationBarTitleDisplayMode(.large)
         .onAppear {
             setupTimeline()
-            viewModel.connectToStore(businessPlanStore)
         }
         .sheet(item: $selectedIsland) { island in
             IslandDetailView(
@@ -156,42 +51,130 @@ struct IslandTimelineView: View {
                 }
             )
         }
-        .sheet(isPresented: $showAIChat) {
-            AIProgressAssistantView(viewModel: viewModel)
-    }
-}
-
-    private var currentJourneyTitle: String {
-        if let idea = businessPlanStore.selectedBusinessIdea {
-            return idea.title
-        }
-        return "Your Business Journey"
     }
     
-    private var currentStageTitle: String {
-        if let stage = viewModel.islands[safe: viewModel.currentIslandIndex] {
-            return stage.title
+    private var headerSection: some View {
+        VStack(spacing: 16) {
+            Text("Progress Map")
+                .font(.system(size: 32, weight: .bold))
+                .foregroundColor(.black)
         }
-        return viewModel.islands.first?.title ?? "Getting Started"
+        .padding(.horizontal, 20)
     }
     
-    private var completionRate: Double {
-        guard !viewModel.islands.isEmpty else { return 0 }
-        return Double(completedCount) / Double(viewModel.islands.count)
+    private var timelineView: some View {
+        ZStack {
+            // Curved dotted path
+            CurvedDottedPath(milestones: milestones, currentIndex: currentMilestoneIndex)
+            
+            // Milestone circles positioned along the path
+            ForEach(Array(milestones.enumerated()), id: \.offset) { index, milestone in
+                milestoneCircle(
+                    title: milestone.0,
+                    icon: milestone.1,
+                    index: index,
+                    isCompleted: index < currentMilestoneIndex,
+                    isCurrent: index == currentMilestoneIndex,
+                    isLocked: index > currentMilestoneIndex
+                )
+                .position(positionForMilestone(at: index))
+            }
+        }
+        .frame(height: 600)
     }
     
-    private var completedCount: Int {
-        if !viewModel.journeyProgress.completedIslandIds.isEmpty {
-            return viewModel.journeyProgress.completedIslandIds.count
+    private func milestoneCircle(title: String, icon: String, index: Int, isCompleted: Bool, isCurrent: Bool, isLocked: Bool) -> some View {
+        ZStack {
+            // Outer ring for current milestone
+            if isCurrent {
+                Circle()
+                    .stroke(
+                        LinearGradient(
+                            colors: [mintGreen, Color.blue],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 4
+                    )
+                    .frame(width: 70, height: 70)
+                    .scaleEffect(1.2)
+                    .opacity(0.8)
+            }
+            
+            // Main circle
+            Circle()
+                .fill(circleColor(isCompleted: isCompleted, isCurrent: isCurrent, isLocked: isLocked))
+                .frame(width: 60, height: 60)
+                .shadow(
+                    color: circleColor(isCompleted: isCompleted, isCurrent: isCurrent, isLocked: isLocked).opacity(0.5),
+                    radius: isCurrent ? 12 : 6,
+                    x: 0,
+                    y: 4
+                )
+            
+            // Icon
+            if isCurrent {
+                Image(systemName: "star.fill")
+                    .font(.title2)
+                    .foregroundColor(.white)
+            } else if isCompleted {
+                Image(systemName: "checkmark")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+            } else if isLocked {
+                Image(systemName: "lock.fill")
+                    .font(.title3)
+                    .foregroundColor(.gray.opacity(0.6))
+            } else {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundColor(.gray.opacity(0.8))
+            }
         }
-        let completedByIndex = viewModel.islands.enumerated().filter { index, island in
-            index < viewModel.currentIslandIndex || island.isCompleted
+        .onTapGesture {
+            if !isLocked {
+                // Handle milestone tap
+            }
         }
-        return completedByIndex.count
     }
     
-    private func isLocked(_ index: Int) -> Bool {
-        index > viewModel.currentIslandIndex
+    private func positionForMilestone(at index: Int) -> CGPoint {
+        let totalHeight: CGFloat = 500
+        let centerX: CGFloat = 200 // Fixed width instead of screen-dependent
+        
+        // Create a curved S-path like in the image
+        let progress = CGFloat(index) / CGFloat(milestones.count - 1)
+        let y = progress * totalHeight + 50
+        
+        // Curve the x position to create the S-shape
+        let amplitude: CGFloat = 80
+        let frequency: CGFloat = 1.5
+        let x = centerX + sin(progress * frequency * .pi) * amplitude
+        
+        return CGPoint(x: x, y: y)
+    }
+    
+    private func circleColor(isCompleted: Bool, isCurrent: Bool, isLocked: Bool) -> Color {
+        if isCurrent {
+            return mintGreen
+        } else if isCompleted {
+            return mintGreen.opacity(0.8)
+        } else if isLocked {
+            return Color.gray.opacity(0.4)
+        } else {
+            return Color.gray.opacity(0.6)
+        }
+    }
+    
+    private var mintGreen: Color {
+        Color(red: 0.0, green: 0.8, blue: 0.6)
+    }
+    
+    private var currentMilestoneIndex: Int {
+        // This would be calculated based on actual progress
+        // For now, showing progress at milestone 1 (Research)
+        return 1
     }
     
     private func setupTimeline() {
@@ -204,146 +187,83 @@ struct IslandTimelineView: View {
     }
 }
 
-private extension Array {
-    subscript(safe index: Int) -> Element? {
-        guard indices.contains(index) else { return nil }
-        return self[index]
-    }
-}
-
-private struct IslandCardRow: View {
-    let island: Island
-    let index: Int
-    let isCurrent: Bool
-    let isCompleted: Bool
-    let isLocked: Bool
-    let onTap: () -> Void
-    
-    @State private var isPressed = false
-    @State private var pulse = false
+// Custom curved dotted path view
+struct CurvedDottedPath: View {
+    let milestones: [(String, String)]
+    let currentIndex: Int
     
     var body: some View {
-        Button {
-            onTap()
-            HapticManager.shared.trigger(.light)
-        } label: {
-            ModernCard(
-                borderColor: borderColor.opacity(0.5),
-                padding: 20
-            ) {
-                HStack(spacing: 16) {
-                    // Status Icon
-            ZStack {
-                        Circle()
-                            .fill(statusColor)
-                            .frame(width: 56, height: 56)
-                            .overlay(
-                    Circle()
-                                    .stroke(Color.white, lineWidth: 3)
-                            )
-                            .scaleEffect(isCurrent && !isCompleted ? (pulse ? 1.1 : 1.0) : 1.0)
-                        .animation(
-                                isCurrent && !isCompleted
-                                    ? Animation.easeInOut(duration: 1.5).repeatForever(autoreverses: true)
-                                    : .default,
-                                value: pulse
-                            )
-                        
-                        if isLocked {
-                            Image(systemName: "lock.fill")
-                                .foregroundColor(.white)
-                                .font(.title3)
-                        } else if isCompleted {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.white)
-                                .font(.title3)
-                                .fontWeight(.bold)
-                        } else {
-                            Text(island.type.icon)
-                                .font(.title2)
-                        }
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text(island.title)
-                                .font(.headline)
-                                .foregroundColor(.primary)
-                            
-                            if isCurrent {
-                                ColorfulBadge("Current", icon: "arrow.right.circle.fill", color: AppColors.primaryOrange)
-                            }
-                        }
-                        
-                        Text(island.description)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(2)
-                        
-                        HStack {
-                            Text("Stage \(index + 1)")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                            
-                            if isCompleted {
-                            Spacer()
-                                HStack(spacing: 4) {
-                            Image(systemName: "checkmark.circle.fill")
-                                        .font(.caption2)
-                                    Text("Completed")
-                                        .font(.caption2)
-                                        .fontWeight(.semibold)
-                                }
-                                .foregroundColor(AppColors.duolingoGreen)
-                            }
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    if !isLocked {
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
+        Canvas { context, size in
+            let centerX = size.width / 2
+            let totalHeight: CGFloat = 500
+            
+            // Draw dotted path connecting all milestones
+            for i in 0..<(milestones.count - 1) {
+                let startProgress = CGFloat(i) / CGFloat(milestones.count - 1)
+                let endProgress = CGFloat(i + 1) / CGFloat(milestones.count - 1)
+                
+                let startY = startProgress * totalHeight + 50
+                let endY = endProgress * totalHeight + 50
+                
+                // Curve the x positions
+                let amplitude: CGFloat = 80
+                let frequency: CGFloat = 1.5
+                let startX = centerX + sin(startProgress * frequency * .pi) * amplitude
+                let endX = centerX + sin(endProgress * frequency * .pi) * amplitude
+                
+                // Create curved path between points
+                var path = Path()
+                path.move(to: CGPoint(x: startX, y: startY))
+                
+                // Add curve control points
+                let midY = (startY + endY) / 2
+                let controlX1 = startX + (endX - startX) * 0.3
+                let controlX2 = startX + (endX - startX) * 0.7
+                
+                path.addCurve(
+                    to: CGPoint(x: endX, y: endY),
+                    control1: CGPoint(x: controlX1, y: midY - 20),
+                    control2: CGPoint(x: controlX2, y: midY + 20)
+                )
+                
+                // Draw dotted line
+                let isCompleted = i < currentIndex
+                let color = isCompleted ? 
+                    Color(red: 0.0, green: 0.8, blue: 0.6) : 
+                    Color.gray.opacity(0.3)
+                
+                context.stroke(
+                    path,
+                    with: .color(color),
+                    style: StrokeStyle(
+                        lineWidth: 2,
+                        lineCap: .round,
+                        dash: [4, 8]
+                    )
+                )
+                
+                // Add small dots along the path
+                drawDotsAlongPath(context: context, path: path, color: color)
             }
         }
-        .buttonStyle(.plain)
-        .disabled(isLocked)
-        .scaleEffect(isPressed ? 0.98 : 1.0)
-        .animation(AnimationHelpers.cardTap, value: isPressed)
-        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
-            isPressed = pressing
-        }, perform: {})
-        .onAppear {
-            if isCurrent && !isCompleted {
-                pulse = true
+        .frame(height: 600)
+    }
+    
+    private func drawDotsAlongPath(context: GraphicsContext, path: Path, color: Color) {
+        // Add small dots along the path for visual effect
+        let pathLength = path.trimmedPath(from: 0, to: 1)
+        for _ in stride(from: 0.0, through: 1.0, by: 0.1) {
+            if let point = pathLength.currentPoint {
+                context.fill(
+                    Path(ellipseIn: CGRect(
+                        x: point.x - 1,
+                        y: point.y - 1,
+                        width: 2,
+                        height: 2
+                    )),
+                    with: .color(color.opacity(0.6))
+                )
             }
-        }
-    }
-    
-    private var statusColor: Color {
-        if isLocked {
-            return .gray
-        } else if isCompleted {
-            return AppColors.duolingoGreen
-        } else if isCurrent {
-            return AppColors.primaryOrange
-        } else {
-            return island.type.color
-        }
-    }
-    
-    private var borderColor: Color {
-        if isLocked {
-            return .gray
-        } else if isCompleted {
-            return AppColors.duolingoGreen
-        } else if isCurrent {
-            return AppColors.primaryOrange
-        } else {
-            return island.type.color
         }
     }
 }

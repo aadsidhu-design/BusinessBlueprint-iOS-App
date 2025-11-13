@@ -13,251 +13,31 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        ZStack {
-            AppColors.backgroundGradient
-                .ignoresSafeArea()
-            
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Profile Card
-                    ModernCard(
-                        gradient: AppColors.vibrantGradient,
-                        padding: 24
-                    ) {
-                        HStack(spacing: 16) {
-                            Circle()
-                                .fill(AppColors.primaryGradient)
-                                .frame(width: 70, height: 70)
-                                .overlay {
-                                    Text(initials)
-                                        .font(.title.bold())
-                                        .foregroundColor(.white)
-                                }
-                            
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(displayName)
-                                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
-                                
-                                Text(userEmail)
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.9))
-                                
-                                if let profile = businessPlanStore.userProfile {
-                                    HStack {
-                                        ColorfulBadge("\(profile.skills.count) skills", color: .white.opacity(0.9))
-                                        ColorfulBadge("\(profile.interests.count) interests", color: .white.opacity(0.9))
-                                    }
-                                }
-                            }
-                            
-                            Spacer()
-                        }
-                    }
-                    .fadeInUp()
-                    
-                    // Profile Actions
-                    VStack(spacing: 12) {
-                        ActionCard(
-                            title: "Edit Profile",
-                            subtitle: "Update your information",
-                            icon: "person.circle.fill",
-                            color: AppColors.primaryOrange
-                        ) {
-                            // Navigate to profile editing
-                        }
+        NavigationStack {
+            ZStack {
+                // Clean white background
+                Color.white
+                    .ignoresSafeArea()
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 24) {
+                        // Profile Card
+                        profileCard
                         
-                        ActionCard(
-                            title: "Retake Quiz",
-                            subtitle: "Refresh your business ideas",
-                            icon: "sparkles",
-                            color: AppColors.brightBlue
-                        ) {
-                            showingOnboarding = true
-                        }
-                    }
-                    .padding(.horizontal, 24)
-                    .fadeInUp(delay: 0.1)
-                    
-                    // Preferences
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Preferences")
-                            .font(.headline)
-                            .padding(.horizontal, 24)
+                        // Settings Sections
+                        preferencesSection
+                        dataPrivacySection
+                        supportSection
+                        accountActionsSection
                         
-                        ModernCard(padding: 20) {
-                            VStack(spacing: 16) {
-                                ToggleRow(
-                                    icon: "bell.fill",
-                                    title: "Notifications",
-                                    isOn: $notificationsEnabled,
-                                    color: AppColors.primaryOrange
-                                )
-                                
-                                Divider()
-                                
-                                ToggleRow(
-                                    icon: "sparkles",
-                                    title: "AI Suggestions",
-                                    isOn: $aiSuggestionsEnabled,
-                                    color: AppColors.primaryPink
-                                )
-                                
-                                Divider()
-                                
-                                ToggleRow(
-                                    icon: "envelope.fill",
-                                    title: "Weekly Emails",
-                                    isOn: $weeklyEmailsEnabled,
-                                    color: AppColors.brightBlue
-                                )
-                            }
-                        }
-                        .padding(.horizontal, 24)
+                        Spacer()
+                            .frame(height: 40)
                     }
-                    .fadeInUp(delay: 0.2)
-                    
-                    // AI Settings
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("AI Settings")
-                            .font(.headline)
-                            .padding(.horizontal, 24)
-                        
-                        AISettingsCard()
-                            .padding(.horizontal, 24)
-                    }
-                    .fadeInUp(delay: 0.25)
-                    
-                    // Data & Privacy
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Data & Privacy")
-                            .font(.headline)
-                            .padding(.horizontal, 24)
-                        
-                        VStack(spacing: 12) {
-                            ActionCard(
-                                title: "Reset Onboarding",
-                                subtitle: "Start the welcome tour again",
-                                icon: "arrow.clockwise.circle.fill",
-                                color: AppColors.duolingoGreen
-                            ) {
-                                // Reset onboarding flag and show it again
-                                UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
-                                showingOnboarding = true
-                            }
-                            
-                            ActionCard(
-                                title: "Export Data",
-                                subtitle: "Download your information",
-                                icon: "square.and.arrow.up",
-                                color: AppColors.primaryOrange
-                            ) {
-                                showingExportData = true
-                            }
-                            
-                            ActionCard(
-                                title: "Privacy Policy",
-                                subtitle: "How we protect your data",
-                                icon: "shield.fill",
-                                color: AppColors.brightBlue
-                            ) {
-                                // Open privacy policy
-                            }
-                            
-                            ActionCard(
-                                title: "Terms of Service",
-                                subtitle: "Legal information",
-                                icon: "doc.text.fill",
-                                color: AppColors.primaryPink
-                            ) {
-                                // Open terms
-                            }
-                        }
-                        .padding(.horizontal, 24)
-                    }
-                    .fadeInUp(delay: 0.3)
-                    
-                    // Support
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Support")
-                            .font(.headline)
-                            .padding(.horizontal, 24)
-                        
-                        VStack(spacing: 12) {
-                            ActionCard(
-                                title: "Help Center",
-                                subtitle: "Get answers to questions",
-                                icon: "questionmark.circle.fill",
-                                color: AppColors.primaryOrange
-                            ) {
-                                // Open help
-                            }
-                            
-                            ActionCard(
-                                title: "Contact Support",
-                                subtitle: "Reach out for assistance",
-                                icon: "envelope.fill",
-                                color: AppColors.brightBlue
-                            ) {
-                                // Open contact form
-                            }
-                            
-                            ActionCard(
-                                title: "Rate App",
-                                subtitle: "Share your feedback",
-                                icon: "star.fill",
-                                color: AppColors.primaryPink
-                            ) {
-                                // Request app review
-                            }
-                        }
-                        .padding(.horizontal, 24)
-                    }
-                    .fadeInUp(delay: 0.4)
-                    
-                    // Account Actions
-                    VStack(spacing: 12) {
-                        PlayfulButton(
-                            title: "Sign Out",
-                            icon: "arrow.right.square.fill",
-                            gradient: LinearGradient(colors: [.red, .red.opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                        ) {
-                            showingSignOut = true
-                        }
-                        
-                        Button {
-                            showingDeleteAccount = true
-                        } label: {
-                            Text("Delete Account")
-                                .font(.headline)
-                                .foregroundColor(.red)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 56)
-                                .background(Color.red.opacity(0.1))
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .stroke(Color.red.opacity(0.3), lineWidth: 1)
-                                )
-                        }
-                    }
-                    .padding(.horizontal, 24)
-                    .fadeInUp(delay: 0.5)
-                    
-                    Spacer()
-                        .frame(height: 40)
-                }
-                .padding(.vertical, 16)
-            }
-        }
-        .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Done") {
-                    dismiss()
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 20)
                 }
             }
+            .navigationBarHidden(true)
         }
         .confirmationDialog("Sign Out", isPresented: $showingSignOut) {
             Button("Sign Out", role: .destructive) {
@@ -284,6 +64,265 @@ struct SettingsView: View {
         }
     }
     
+    private var profileCard: some View {
+        VStack(spacing: 20) {
+            // Header
+            HStack {
+                Text("Settings")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.black)
+                
+                Spacer()
+            }
+            
+            // Profile Info
+            HStack(spacing: 16) {
+                Circle()
+                    .fill(mintGreen)
+                    .frame(width: 70, height: 70)
+                    .overlay {
+                        Text(initials)
+                            .font(.title.bold())
+                            .foregroundColor(.white)
+                    }
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(displayName)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(.black)
+                    
+                    Text(userEmail)
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                    
+                    if let profile = businessPlanStore.userProfile {
+                        HStack(spacing: 8) {
+                            Badge("\(profile.skills.count) skills")
+                            Badge("\(profile.interests.count) interests")
+                        }
+                    }
+                }
+                
+                Spacer()
+            }
+        }
+        .padding(24)
+        .background(Color.white)
+        .cornerRadius(20)
+        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 2)
+    }
+    
+    private var preferencesSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Preferences")
+                .font(.headline)
+                .foregroundColor(.black)
+            
+            VStack(spacing: 0) {
+                SettingsRow(
+                    icon: "bell.fill",
+                    title: "Notifications",
+                    subtitle: "Push notifications and alerts",
+                    action: {
+                        Toggle("", isOn: $notificationsEnabled)
+                            .tint(mintGreen)
+                    }
+                )
+                
+                Divider()
+                    .padding(.leading, 50)
+                
+                SettingsRow(
+                    icon: "sparkles",
+                    title: "AI Suggestions",
+                    subtitle: "Get AI-powered recommendations",
+                    action: {
+                        Toggle("", isOn: $aiSuggestionsEnabled)
+                            .tint(mintGreen)
+                    }
+                )
+                
+                Divider()
+                    .padding(.leading, 50)
+                
+                SettingsRow(
+                    icon: "envelope.fill",
+                    title: "Weekly Emails",
+                    subtitle: "Progress summaries and tips",
+                    action: {
+                        Toggle("", isOn: $weeklyEmailsEnabled)
+                            .tint(mintGreen)
+                    }
+                )
+            }
+            .background(Color.white)
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        }
+    }
+    
+    private var dataPrivacySection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Data & Privacy")
+                .font(.headline)
+                .foregroundColor(.black)
+            
+            VStack(spacing: 0) {
+                SettingsRow(
+                    icon: "arrow.clockwise.circle.fill",
+                    title: "Reset Onboarding",
+                    subtitle: "Start the welcome tour again",
+                    action: {
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                ) {
+                    UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+                    showingOnboarding = true
+                }
+                
+                Divider()
+                    .padding(.leading, 50)
+                
+                SettingsRow(
+                    icon: "square.and.arrow.up",
+                    title: "Export Data",
+                    subtitle: "Download your information",
+                    action: {
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                ) {
+                    showingExportData = true
+                }
+                
+                Divider()
+                    .padding(.leading, 50)
+                
+                SettingsRow(
+                    icon: "shield.fill",
+                    title: "Privacy Policy",
+                    subtitle: "How we protect your data",
+                    action: {
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                ) {
+                    // Open privacy policy
+                }
+            }
+            .background(Color.white)
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        }
+    }
+    
+    private var supportSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Support")
+                .font(.headline)
+                .foregroundColor(.black)
+            
+            VStack(spacing: 0) {
+                SettingsRow(
+                    icon: "questionmark.circle.fill",
+                    title: "Help Center",
+                    subtitle: "Get answers to questions",
+                    action: {
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                ) {
+                    // Open help
+                }
+                
+                Divider()
+                    .padding(.leading, 50)
+                
+                SettingsRow(
+                    icon: "envelope.fill",
+                    title: "Contact Support",
+                    subtitle: "Reach out for assistance",
+                    action: {
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                ) {
+                    // Open contact form
+                }
+                
+                Divider()
+                    .padding(.leading, 50)
+                
+                SettingsRow(
+                    icon: "star.fill",
+                    title: "Rate App",
+                    subtitle: "Share your feedback",
+                    action: {
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                ) {
+                    // Request app review
+                }
+            }
+            .background(Color.white)
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        }
+    }
+    
+    private var accountActionsSection: some View {
+        VStack(spacing: 12) {
+            Button {
+                showingSignOut = true
+            } label: {
+                HStack {
+                    Image(systemName: "arrow.right.square.fill")
+                        .foregroundColor(.red)
+                    Text("Sign Out")
+                        .font(.headline)
+                        .foregroundColor(.red)
+                    Spacer()
+                }
+                .padding(20)
+                .background(Color.white)
+                .cornerRadius(16)
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+            }
+            
+            Button {
+                showingDeleteAccount = true
+            } label: {
+                HStack {
+                    Image(systemName: "trash.fill")
+                        .foregroundColor(.red)
+                    Text("Delete Account")
+                        .font(.headline)
+                        .foregroundColor(.red)
+                    Spacer()
+                }
+                .padding(20)
+                .background(Color.red.opacity(0.05))
+                .cornerRadius(16)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.red.opacity(0.2), lineWidth: 1)
+                )
+            }
+        }
+    }
+    
+    private var mintGreen: Color {
+        Color(red: 0.0, green: 0.8, blue: 0.6)
+    }
+    
     private var initials: String {
         if let profile = businessPlanStore.userProfile {
             let first = profile.firstName.prefix(1)
@@ -305,31 +344,78 @@ struct SettingsView: View {
     }
 }
 
-private struct ToggleRow: View {
+struct SettingsRow<ActionView: View>: View {
     let icon: String
     let title: String
-    @Binding var isOn: Bool
-    let color: Color
+    let subtitle: String
+    let action: () -> ActionView
+    let onTap: (() -> Void)?
+    
+    init(
+        icon: String,
+        title: String,
+        subtitle: String,
+        @ViewBuilder action: @escaping () -> ActionView,
+        onTap: (() -> Void)? = nil
+    ) {
+        self.icon = icon
+        self.title = title
+        self.subtitle = subtitle
+        self.action = action
+        self.onTap = onTap
+    }
     
     var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundColor(color)
-                .font(.title3)
-                .frame(width: 30)
-            
-            Text(title)
-                .font(.body)
-            
-            Spacer()
-            
-            Toggle("", isOn: $isOn)
-                .tint(color)
+        Button(action: {
+            onTap?()
+        }) {
+            HStack(spacing: 16) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundColor(Color(red: 0.0, green: 0.8, blue: 0.6))
+                    .frame(width: 24, height: 24)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.body.weight(.medium))
+                        .foregroundColor(.black)
+                    
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                
+                Spacer()
+                
+                action()
+            }
+            .padding(.vertical, 16)
+            .padding(.horizontal, 20)
         }
+        .buttonStyle(.plain)
+        .disabled(onTap == nil)
     }
 }
 
-private struct ExportDataView: View {
+struct Badge: View {
+    let text: String
+    
+    init(_ text: String) {
+        self.text = text
+    }
+    
+    var body: some View {
+        Text(text)
+            .font(.caption2.weight(.medium))
+            .foregroundColor(Color(red: 0.0, green: 0.8, blue: 0.6))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color(red: 0.0, green: 0.8, blue: 0.6).opacity(0.1))
+            .cornerRadius(8)
+    }
+}
+
+struct ExportDataView: View {
     @State private var isExporting = false
     @State private var exportProgress: Double = 0
     @Environment(\.dismiss) private var dismiss
@@ -337,64 +423,60 @@ private struct ExportDataView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppColors.backgroundGradient
+                Color.white
                     .ignoresSafeArea()
                 
                 ScrollView {
                     VStack(spacing: 24) {
                         if isExporting {
-                            ModernCard(padding: 40) {
-                                VStack(spacing: 16) {
-                                    ProgressView(value: exportProgress)
-                                        .tint(AppColors.primaryOrange)
-                                    Text("Preparing your data export...")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
+                            VStack(spacing: 16) {
+                                ProgressView(value: exportProgress)
+                                    .tint(Color(red: 0.0, green: 0.8, blue: 0.6))
+                                Text("Preparing your data export...")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
                             }
+                            .padding(40)
+                            .background(Color.white)
+                            .cornerRadius(20)
+                            .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 2)
                             .padding(24)
                         } else {
-                            ModernCard(padding: 40) {
-                                VStack(spacing: 20) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(AppColors.primaryOrange.opacity(0.15))
-                                            .frame(width: 80, height: 80)
-                                        Image(systemName: "square.and.arrow.up.circle.fill")
-                                            .font(.system(size: 40))
-                                            .foregroundStyle(AppColors.primaryGradient)
-                                    }
-                                    
-                                    Text("Export Your Data")
-                                        .font(.headline)
-                                    
-                                    Text("Download a copy of your business plans, goals, notes, and progress data.")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .multilineTextAlignment(.center)
+                            VStack(spacing: 20) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color(red: 0.0, green: 0.8, blue: 0.6).opacity(0.15))
+                                        .frame(width: 80, height: 80)
+                                    Image(systemName: "square.and.arrow.up.circle.fill")
+                                        .font(.system(size: 40))
+                                        .foregroundColor(Color(red: 0.0, green: 0.8, blue: 0.6))
                                 }
+                                
+                                Text("Export Your Data")
+                                    .font(.headline)
+                                    .foregroundColor(.black)
+                                
+                                Text("Download a copy of your business plans, goals, notes, and progress data.")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                                    .multilineTextAlignment(.center)
                             }
+                            .padding(40)
+                            .background(Color.white)
+                            .cornerRadius(20)
+                            .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 2)
                             .padding(24)
                             
-                            ModernCard(padding: 20) {
-                                VStack(alignment: .leading, spacing: 12) {
-                                    Text("Included in export")
-                                        .font(.headline)
-                                    
-                                    ExportItem("Business ideas and analysis")
-                                    ExportItem("Goals and milestones")
-                                    ExportItem("Notes and insights")
-                                    ExportItem("Progress tracking data")
-                                }
-                            }
-                            .padding(.horizontal, 24)
-                            
-                            PlayfulButton(
-                                title: "Export Data",
-                                icon: "square.and.arrow.up.fill",
-                                gradient: AppColors.primaryGradient
-                            ) {
+                            Button {
                                 startExport()
+                            } label: {
+                                Text("Export Data")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color(red: 0.0, green: 0.8, blue: 0.6))
+                                    .cornerRadius(16)
                             }
                             .padding(.horizontal, 24)
                         }
@@ -409,6 +491,7 @@ private struct ExportDataView: View {
                     Button("Done") {
                         dismiss()
                     }
+                    .foregroundColor(.black)
                 }
             }
         }
@@ -426,23 +509,6 @@ private struct ExportDataView: View {
                     dismiss()
                 }
             }
-        }
-    }
-}
-
-private struct ExportItem: View {
-    let text: String
-    
-    init(_ text: String) {
-        self.text = text
-    }
-    
-    var body: some View {
-        HStack {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(AppColors.duolingoGreen)
-            Text(text)
-                .font(.body)
         }
     }
 }

@@ -12,45 +12,45 @@ struct MainTabViewNew: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
+            // Dashboard Tab
             NavigationStack {
-                DiscoverView()
+                DashboardViewNew()
             }
             .tabItem {
-                Label("Discover", systemImage: "lightbulb.fill")
+                Image(systemName: selectedTab == 0 ? "house.fill" : "house")
+                Text("Home")
             }
             .tag(0)
             
+            // Timeline Tab
             NavigationStack {
-                TimelineFinal(timelineVM: timelineVM)
+                IslandTimelineView()
             }
             .tabItem {
-                Label("Timeline", systemImage: "map.fill")
+                Image(systemName: selectedTab == 1 ? "map.fill" : "map")
+                Text("Timeline")
             }
             .tag(1)
             
-            NavigationStack {
-                PlannerNotesView(timelineVM: timelineVM)
-            }
-            .tabItem {
-                Label("Notes", systemImage: "doc.text.fill")
-            }
-            .tag(2)
-            
+            // AI Assistant Tab
             NavigationStack {
                 NewAIAssistantView()
             }
             .tabItem {
-                Label("AI Assistant", systemImage: "sparkles")
+                Image(systemName: selectedTab == 2 ? "sparkles" : "sparkles")
+                Text("AI Assistant")
             }
-            .tag(3)
+            .tag(2)
             
+            // Settings Tab
             NavigationStack {
                 SettingsView()
             }
             .tabItem {
-                Label("Settings", systemImage: "gearshape.fill")
+                Image(systemName: selectedTab == 3 ? "gearshape.fill" : "gearshape")
+                Text("Settings")
             }
-            .tag(4)
+            .tag(3)
         }
         .environmentObject(experienceVM)
         .tint(AppColors.primary)
@@ -70,12 +70,6 @@ struct MainTabViewNew: View {
         }
         .onAppear {
             checkOnboardingStatus()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .switchToPlannerTab)) { _ in
-            selectedTab = 2
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .switchToJourneyTab)) { _ in
-            selectedTab = 1
         }
         .sheet(isPresented: $showingOnboarding) {
             OnboardingView()

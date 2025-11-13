@@ -3,6 +3,44 @@ import SwiftUI
 import Combine
 
 class DashboardViewModel: ObservableObject {
+    struct NutritionSummary {
+        var goal: Int
+        var consumed: Int
+        var burned: Int
+        var caloriesLeft: Int {
+            max(goal - consumed + burned, 0)
+        }
+        var progress: Double {
+            guard goal > 0 else { return 0 }
+            return min(Double(consumed) / Double(goal), 1)
+        }
+    }
+    
+    struct MacroBreakdown: Identifiable {
+        let id = UUID()
+        let name: String
+        let amountLeft: Int
+        let goal: Int
+        let unit: String
+        let systemImage: String
+    }
+    
+    struct MacroHighlight: Identifiable {
+        let id = UUID()
+        let label: String
+        let value: String
+        let systemImage: String
+    }
+    
+    struct MealLog: Identifiable {
+        let id = UUID()
+        let title: String
+        let time: Date
+        let calories: Int
+        let imageURL: URL?
+        let macros: [MacroHighlight]
+    }
+    
     @Published var dailyGoals: [DailyGoal] = []
     @Published var milestones: [Milestone] = []
     @Published var selectedBusinessIdea: BusinessIdea?
@@ -12,10 +50,19 @@ class DashboardViewModel: ObservableObject {
     @Published var aiGeneratedGoals: [String] = []
     @Published var aiAdvice: String = ""
     @Published var isGeneratingAIContent = false
+    @Published var nutritionSummary = NutritionSummary(goal: 2200, consumed: 461, burned: 0)
+    @Published var macroBreakdown: [MacroBreakdown] = []
+    @Published var recentMeals: [MealLog] = []
     
     private var userId: String?
     
     init(userId: String? = nil) {
+        self.userId = userId
+        prepareNutritionPreviewIfNeeded()
+    }
+
+    /// Attach the authenticated user's id so the view model can fetch/save data.
+    func attachUser(userId: String) {
         self.userId = userId
     }
     
@@ -152,38 +199,40 @@ class DashboardViewModel: ObservableObject {
     }
     
     func toggleGoalCompletion(_ goalId: String) {
+        guard let userId = userId else { return }
         if let index = dailyGoals.firstIndex(where: { $0.id == goalId }) {
-            let goal = dailyGoals[index]
-            // In a real app, update Firebase here
-            dailyGoals[index] = DailyGoal(
-                id: goal.id,
-                businessIdeaId: goal.businessIdeaId,
-                title: goal.title,
-                description: goal.description,
-                dueDate: goal.dueDate,
-                completed: !goal.completed,
-                priority: goal.priority,
-                createdAt: goal.createdAt,
-                userId: goal.userId
-            )
+            let current = dailyGoals[index]
+            let newCompleted = !current.completed
+            // Update backend
+            FirebaseService.shared.toggleGoalCompletion(goalId: goalId, completed: newCompleted, userId: userId) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        self?.dailyGoals[index].completed = newCompleted
+                    case .failure(let error):
+                        self?.errorMessage = error.localizedDescription
+                    }
+                }
+            }
         }
     }
     
     func toggleMilestoneCompletion(_ milestoneId: String) {
+        guard let userId = userId else { return }
         if let index = milestones.firstIndex(where: { $0.id == milestoneId }) {
-            let milestone = milestones[index]
-            milestones[index] = Milestone(
-                id: milestone.id,
-                businessIdeaId: milestone.businessIdeaId,
-                title: milestone.title,
-                description: milestone.description,
-                dueDate: milestone.dueDate,
-                completed: !milestone.completed,
-                order: milestone.order,
-                createdAt: milestone.createdAt,
-                userId: milestone.userId
-            )
-            calculateCompletion()
+            let current = milestones[index]
+            let newCompleted = !current.completed
+            FirebaseService.shared.toggleMilestoneCompletion(milestoneId: milestoneId, completed: newCompleted, userId: userId) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        self?.milestones[index].completed = newCompleted
+                        self?.calculateCompletion()
+                    case .failure(let error):
+                        self?.errorMessage = error.localizedDescription
+                    }
+                }
+            }
         }
     }
     
@@ -204,59 +253,17 @@ class DashboardViewModel: ObservableObject {
         dailyGoals.filter { $0.completed }.count
     }
     
+    func prepareNutritionPreviewIfNeeded() {
+        // Removed demo data - will be populated from real backend
+        guard macroBreakdown.isEmpty && recentMeals.isEmpty else { return }
+        nutritionSummary = NutritionSummary(goal: 0, consumed: 0, burned: 0)
+        macroBreakdown = []
+        recentMeals = []
+    }
+    
     func bootstrapDemoData(for idea: BusinessIdea) {
-        guard dailyGoals.isEmpty && milestones.isEmpty else { return }
-        let today = Date()
-        let userIdentifier = userId ?? idea.userId
-        dailyGoals = [
-            DailyGoal(
-                id: UUID().uuidString,
-                businessIdeaId: idea.id,
-                title: "Interview 3 potential customers",
-                description: "Validate the pain point and pricing assumptions",
-                dueDate: Calendar.current.date(byAdding: .day, value: 1, to: today) ?? today,
-                completed: false,
-                priority: "High",
-                createdAt: today,
-                userId: userIdentifier
-            ),
-            DailyGoal(
-                id: UUID().uuidString,
-                businessIdeaId: idea.id,
-                title: "Draft the value proposition",
-                description: "Summarize benefits for landing page copy",
-                dueDate: Calendar.current.date(byAdding: .day, value: 2, to: today) ?? today,
-                completed: false,
-                priority: "Medium",
-                createdAt: today,
-                userId: userIdentifier
-            )
-        ]
-        
-        milestones = [
-            Milestone(
-                id: UUID().uuidString,
-                businessIdeaId: idea.id,
-                title: "Validate Problem",
-                description: "Collect insights from 10 target users",
-                dueDate: Calendar.current.date(byAdding: .day, value: 14, to: today) ?? today,
-                completed: false,
-                order: 1,
-                createdAt: today,
-                userId: userIdentifier
-            ),
-            Milestone(
-                id: UUID().uuidString,
-                businessIdeaId: idea.id,
-                title: "Launch MVP",
-                description: "Ship the first version to early adopters",
-                dueDate: Calendar.current.date(byAdding: .day, value: 35, to: today) ?? today,
-                completed: false,
-                order: 2,
-                createdAt: today,
-                userId: userIdentifier
-            )
-        ]
-        calculateCompletion()
+        // Removed demo data - fetch from Firebase instead
+        guard let userId = userId else { return }
+        fetchDashboardData(businessIdeaId: idea.id)
     }
 }

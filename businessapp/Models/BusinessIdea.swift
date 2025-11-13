@@ -43,7 +43,7 @@ struct DailyGoal: Identifiable, Codable {
     let title: String
     let description: String
     let dueDate: Date
-    let completed: Bool
+    var completed: Bool
     let priority: String // High, Medium, Low
     let createdAt: Date
     let userId: String
@@ -64,7 +64,7 @@ struct Milestone: Identifiable, Codable {
     let title: String
     let description: String
     let dueDate: Date
-    let completed: Bool
+    var completed: Bool
     let order: Int
     let createdAt: Date
     let userId: String

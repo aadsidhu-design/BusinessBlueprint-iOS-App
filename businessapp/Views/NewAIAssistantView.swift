@@ -5,6 +5,7 @@ struct NewAIAssistantView: View {
     @EnvironmentObject private var businessPlanStore: BusinessPlanStore
     @StateObject private var contextManager = IntelligentContextManager.shared
     private let aiService = GoogleAIService.shared
+    @Environment(\.dismiss) private var dismiss
     
     @State private var messages: [AssistantMessage] = []
     @State private var inputText = ""
@@ -18,32 +19,39 @@ struct NewAIAssistantView: View {
     
     var body: some View {
         ZStack {
-            Color.white
+            // Background tap area to dismiss
+            Color.black.opacity(0.3)
                 .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Header
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("AI Assistant")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                            .foregroundColor(.black)
-                        Text("Powered by Gemini")
-                            .font(.caption)
-                            .foregroundColor(.gray)
+                .onTapGesture {
+                    if !isFocused {
+                        dismiss()
                     }
+                }
+            
+            // Main content with rounded corners
+            VStack(spacing: 0) {
+                // Header with close button
+                HStack {
+                    Text("AI Assistant")
+                        .font(.title2.bold())
+                        .foregroundColor(.black)
                     
                     Spacer()
+                    
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.gray)
+                            .frame(width: 32, height: 32)
+                            .background(Color.gray.opacity(0.1))
+                            .clipShape(Circle())
+                    }
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-                .background(Color.white)
-                .overlay(
-                    Rectangle()
-                        .frame(height: 1)
-                        .foregroundColor(.gray.opacity(0.2)),
-                    alignment: .bottom
-                )
+                .padding(.top, 20)
+                .padding(.bottom, 10)
                 
                 // Messages
                 ScrollViewReader { proxy in
@@ -107,11 +115,12 @@ struct NewAIAssistantView: View {
                     .background(Color.gray.opacity(0.05))
                 }
                 
-                // Animated Bottom Bar
+                // Animated Bottom Bar with rounded edges
                 let fillColor = Color.gray.opacity(0.15)
+                let mintGreen = Color(red: 0.0, green: 0.8, blue: 0.6)
                 AnimatedBottomBar(
                     hint: "Ask anything...",
-                    tint: .green,
+                    tint: mintGreen,
                     text: $inputText,
                     isFocused: $isFocused
                 ) {
@@ -144,35 +153,32 @@ struct NewAIAssistantView: View {
                     }
                 } trailingAction: {
                     Button {
-                        if isFocused {
-                            isFocused = false
-                        } else {
+                        if !inputText.trimmingCharacters(in: .whitespaces).isEmpty {
                             sendMessage()
                         }
                     } label: {
-                        ZStack {
-                            Image(systemName: "checkmark")
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .background(Color.green.gradient, in: .circle)
-                                .blur(radius: isFocused ? 0 : 5)
-                                .opacity(isFocused ? 1 : 0)
-                            
-                            Image(systemName: "arrow.up")
-                                .foregroundColor(.primary)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .background(fillColor, in: .circle)
-                                .blur(radius: !isFocused ? 0 : 5)
-                                .opacity(!isFocused ? 1 : 0)
-                        }
+                        Image(systemName: "arrow.up")
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(
+                                (!inputText.trimmingCharacters(in: .whitespaces).isEmpty ? mintGreen : Color.gray.opacity(0.3)).gradient,
+                                in: .circle
+                            )
                     }
+                    .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty)
                 } mainAction: {
                     EmptyView()
                 }
                 .padding(.horizontal, 15)
                 .padding(.bottom, 10)
             }
+            .background(Color.white)
+            .cornerRadius(20)
+            .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: 10)
+            .padding(.horizontal, 16)
+            .padding(.top, 60)
+            .padding(.bottom, 40)
         }
         .sheet(isPresented: $showImagePicker) {
             ImagePicker { image in
@@ -248,14 +254,12 @@ struct NewAIAssistantView: View {
             metadata: ["type": "assistant_chat"]
         )
         
-        let fullContext = buildContextPrompt()
-        let prompt = """
-        \(fullContext)
+        // Simple test prompt first
+        let prompt = "You are a helpful business assistant. The user said: '\(messageText)'. Please provide a helpful, conversational response."
         
-        User message: \(messageText)
-        
-        Provide a helpful, specific response. Be conversational and actionable.
-        """
+        print("🤖 Sending AI request with prompt: \(prompt)")
+        print("🔑 API Key configured: \(!Config.googleAIKey.isEmpty)")
+        print("🌐 Model: \(Config.googleAIModel)")
         
         aiService.makeAIRequest(prompt: prompt) { result in
             Task { @MainActor in
@@ -263,6 +267,7 @@ struct NewAIAssistantView: View {
                 
                 switch result {
                 case .success(let response):
+                    print("✅ AI Response received: \(response)")
                     let aiMessage = AssistantMessage(content: response, isFromUser: false)
                     messages.append(aiMessage)
                     
@@ -272,12 +277,14 @@ struct NewAIAssistantView: View {
                     )
                     
                 case .failure(let error):
+                    print("❌ AI Error: \(error)")
+                    print("❌ Error description: \(error.localizedDescription)")
+                    
                     let errorMessage = AssistantMessage(
-                        content: "I'm sorry, I encountered an error. Please try again.",
+                        content: "Error: \(error.localizedDescription)\n\nAPI Key: \(Config.googleAIKey.isEmpty ? "Missing" : "Present")\nModel: \(Config.googleAIModel)",
                         isFromUser: false
                     )
                     messages.append(errorMessage)
-                    print("AI Error: \(error)")
                 }
             }
         }
@@ -365,8 +372,8 @@ struct MessageBubbleView: View {
                             .background(
                                 LinearGradient(
                                     gradient: Gradient(colors: [
-                                        Color.green,
-                                        Color.green.opacity(0.8)
+                                        Color(red: 0.0, green: 0.8, blue: 0.6),
+                                        Color(red: 0.0, green: 0.8, blue: 0.6).opacity(0.8)
                                     ]),
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -387,7 +394,7 @@ struct MessageBubbleView: View {
                         Text("AI Assistant")
                             .font(.system(size: 12, weight: .semibold))
                     }
-                    .foregroundColor(Color.green)
+                    .foregroundColor(Color(red: 0.0, green: 0.8, blue: 0.6))
                     
                     if !message.content.isEmpty {
                         Text(message.content)
@@ -397,7 +404,7 @@ struct MessageBubbleView: View {
                             .padding(.vertical, 12)
                             .background(
                                 RoundedRectangle(cornerRadius: 18)
-                                    .fill(Color(hex: "F5F5F5"))
+                                    .fill(Color.gray.opacity(0.1))
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 18)

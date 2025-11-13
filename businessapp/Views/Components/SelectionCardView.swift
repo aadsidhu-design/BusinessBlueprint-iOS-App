@@ -27,26 +27,21 @@ struct SelectionCardView: View {
                     }
                 }
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(question.answerText[selectedIndex])
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.black)
-                    
-                    if !question.answerSubText.isEmpty && selectedIndex < question.answerSubText.count {
-                        Text(question.answerSubText[selectedIndex])
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundStyle(.gray)
-                    }
-                }
+                            VStack(alignment: .leading, spacing: 4) {
+                                // Question.options holds the option strings
+                                if selectedIndex < question.options.count {
+                                    Text(question.options[selectedIndex])
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(.black)
+                                } else {
+                                    Text("")
+                                        .font(.system(size: 16, weight: .semibold))
+                                }
+                            }
                 
                 Spacer()
                 
-                if !question.answerImage.isEmpty && selectedIndex < question.answerImage.count {
-                    Image(question.answerImage[selectedIndex])
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 40, height: 40)
-                }
+                // No image data available in the current Question model; keep layout compact
             }
             .padding(16)
             .background(

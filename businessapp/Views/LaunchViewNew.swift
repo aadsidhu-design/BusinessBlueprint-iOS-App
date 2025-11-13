@@ -77,12 +77,10 @@ struct LaunchViewNew: View {
             }
         }
         .sheet(isPresented: $showSignUp) {
-            AuthViewNew(isSignUp: true)
-                .environmentObject(authVM)
+            AuthViewNew(viewModel: authVM, isSignUp: true)
         }
         .sheet(isPresented: $showSignIn) {
-            AuthViewNew(isSignUp: false)
-                .environmentObject(authVM)
+            AuthViewNew(viewModel: authVM, isSignUp: false)
         }
         .onAppear {
             withAnimation(.easeOut(duration: 0.6)) {

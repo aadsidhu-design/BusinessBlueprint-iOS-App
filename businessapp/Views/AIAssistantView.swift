@@ -13,47 +13,59 @@ struct AIAssistantView: View {
     
     var body: some View {
         ZStack {
-            AppColors.backgroundGradient
-                .ignoresSafeArea()
+            LinearGradient(
+                colors: [
+                    Color(red: 0.95, green: 0.96, blue: 0.98),
+                    Color(red: 0.98, green: 0.98, blue: 0.99)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
             
             ScrollView {
                 VStack(spacing: 24) {
-                    // Header Card
-                    ModernCard(
-                        gradient: AppColors.vibrantGradient,
-                        padding: 24
-                    ) {
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.white.opacity(0.25))
-                                        .frame(width: 60, height: 60)
-                                    
-                                    Image(systemName: "sparkles")
-                                        .font(.system(size: 30))
-                                        .foregroundColor(.white)
-                                }
+                    // Header Card with Apple White Glass
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                Color.blue.opacity(0.6),
+                                                Color.purple.opacity(0.6)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 60, height: 60)
                                 
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("AI Assistant")
-                                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                                        .foregroundColor(.white)
-                                    Text("Powered by Google Gemini")
-                                        .font(.caption)
-                                        .foregroundColor(.white.opacity(0.9))
-                                }
+                                Image(systemName: "sparkles")
+                                    .font(.system(size: 30))
+                                    .foregroundColor(.white)
                             }
                             
-                            HStack {
-                                Image(systemName: "lightbulb.fill")
-                                    .foregroundColor(.white.opacity(0.9))
-                                Text(businessIdea.title)
-                                    .font(.body)
-                                    .foregroundColor(.white.opacity(0.9))
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("AI Assistant")
+                                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                                    .foregroundColor(.primary)
+                                Text("Powered by Google Gemini")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
                         }
+                        
+                        HStack {
+                            Image(systemName: "lightbulb.fill")
+                                .foregroundColor(.orange)
+                            Text(businessIdea.title)
+                                .font(.body)
+                                .foregroundColor(.primary)
+                        }
                     }
+                    .glassBackground(.appleWhite)
                     .fadeInUp()
                     
                     // AI Analysis
@@ -61,9 +73,10 @@ struct AIAssistantView: View {
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Business Analysis")
                                 .font(.headline)
+                                .foregroundColor(.primary)
                                 .padding(.horizontal, 24)
                             
-                            ModernCard(padding: 20) {
+                            VStack(alignment: .leading, spacing: 16) {
                                 VStack(alignment: .leading, spacing: 16) {
                                     HStack {
                                         Text("Viability Score")
@@ -98,28 +111,27 @@ struct AIAssistantView: View {
                                     }
                                     
                                     if !analysis.recommendations.isEmpty {
-                                        ModernCard(
-                                            borderColor: AppColors.primaryOrange.opacity(0.5),
-                                            padding: 16
-                                        ) {
-                                            VStack(alignment: .leading, spacing: 12) {
-                                                Text("Recommendations")
-                                                    .font(.headline)
-                                                
-                                                ForEach(analysis.recommendations, id: \.self) { rec in
-                                                    HStack(alignment: .top, spacing: 8) {
-                                                        Image(systemName: "checkmark.circle.fill")
-                                                            .foregroundColor(AppColors.primaryOrange)
-                                                            .font(.caption)
-                                                        Text(rec)
-                                                            .font(.caption)
-                                                    }
+                                        VStack(alignment: .leading, spacing: 12) {
+                                            Text("Recommendations")
+                                                .font(.headline)
+                                                .foregroundColor(.primary)
+                                            
+                                            ForEach(analysis.recommendations, id: \.self) { rec in
+                                                HStack(alignment: .top, spacing: 8) {
+                                                    Image(systemName: "checkmark.circle.fill")
+                                                        .foregroundColor(.orange)
+                                                        .font(.caption)
+                                                    Text(rec)
+                                                        .font(.caption)
+                                                        .foregroundColor(.primary)
                                                 }
                                             }
                                         }
+                                        .glassBackground(.appleWhite)
                                     }
                                 }
                             }
+                            .glassBackground(.appleWhite)
                             .padding(.horizontal, 24)
                         }
                         .fadeInUp(delay: 0.1)
@@ -130,23 +142,24 @@ struct AIAssistantView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("AI-Generated Daily Goals")
                                 .font(.headline)
+                                .foregroundColor(.primary)
                                 .padding(.horizontal, 24)
                             
                             ForEach(Array(viewModel.dailyGoals.enumerated()), id: \.offset) { index, goal in
-                                ModernCard(padding: 16) {
-                                    HStack(alignment: .top, spacing: 12) {
-                                        ZStack {
-                                            Circle()
-                                                .fill(AppColors.primaryOrange.opacity(0.15))
-                                                .frame(width: 32, height: 32)
-                                            Text("\(index + 1)")
-                                                .font(.caption.bold())
-                                                .foregroundColor(AppColors.primaryOrange)
-                                        }
-                                        Text(goal)
-                                            .font(.body)
+                                HStack(alignment: .top, spacing: 12) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.blue.opacity(0.15))
+                                            .frame(width: 32, height: 32)
+                                        Text("\(index + 1)")
+                                            .font(.caption.bold())
+                                            .foregroundColor(.blue)
                                     }
+                                    Text(goal)
+                                        .font(.body)
+                                        .foregroundColor(.primary)
                                 }
+                                .glassBackground(.appleWhite)
                                 .padding(.horizontal, 24)
                             }
                         }
@@ -155,26 +168,19 @@ struct AIAssistantView: View {
                     
                     // Personalized Advice
                     if !viewModel.personalizedAdvice.isEmpty {
-                        ModernCard(
-                            gradient: LinearGradient(
-                                colors: [AppColors.primaryPink.opacity(0.3), AppColors.primaryOrange.opacity(0.3)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            padding: 20
-                        ) {
-                            VStack(alignment: .leading, spacing: 12) {
-                                HStack {
-                                    Image(systemName: "heart.fill")
-                                        .foregroundColor(AppColors.primaryPink)
-                                    Text("Personalized Advice")
-                                        .font(.headline)
-                                }
-                                Text(viewModel.personalizedAdvice)
-                                    .font(.body)
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "heart.fill")
+                                    .foregroundColor(.pink)
+                                Text("Personalized Advice")
+                                    .font(.headline)
                                     .foregroundColor(.primary)
                             }
+                            Text(viewModel.personalizedAdvice)
+                                .font(.body)
+                                .foregroundColor(.primary)
                         }
+                        .glassBackground(.appleWhite)
                         .padding(.horizontal, 24)
                         .fadeInUp(delay: 0.3)
                     }

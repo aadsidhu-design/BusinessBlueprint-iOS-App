@@ -45,7 +45,7 @@ struct JourneyHomeView: View {
                 }
             )
         }
-        .sheet(isPresented: $showAI) {
+        .fullScreenCover(isPresented: $showAI) {
             NavigationStack {
                 AIProgressAssistantView(viewModel: timelineVM)
             }

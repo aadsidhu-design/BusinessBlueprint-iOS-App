@@ -19,16 +19,11 @@ struct NewAIAssistantView: View {
     
     var body: some View {
         ZStack {
-            // Background tap area to dismiss
-            Color.black.opacity(0.3)
+            // Full screen background gradient — fills screen for a full-page chat
+            AppColors.backgroundGradient
                 .ignoresSafeArea()
-                .onTapGesture {
-                    if !isFocused {
-                        dismiss()
-                    }
-                }
-            
-            // Main content with rounded corners
+
+            // Main content
             VStack(spacing: 0) {
                 // Header with close button
                 HStack {
@@ -173,12 +168,32 @@ struct NewAIAssistantView: View {
                 .padding(.horizontal, 15)
                 .padding(.bottom, 10)
             }
-            .background(Color.white)
-            .cornerRadius(20)
-            .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: 10)
-            .padding(.horizontal, 16)
-            .padding(.top, 60)
-            .padding(.bottom, 40)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.top, 8)
+            .overlay(
+                // small non-sensitive status indicator: shows whether a key is present
+                VStack {
+                    HStack {
+                        Spacer()
+                        HStack(spacing: 8) {
+                            Text(Config.googleAIKey.isEmpty ? "API: Not configured" : "API: Configured")
+                            Text("(")
+                            Text(Config.googleAIKey.isEmpty ? "source: none" : "source: \(Config.googleAIKeySource())")
+                                .bold()
+                                .foregroundColor(AppColors.primary)
+                            Text(")")
+                        }
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .padding(6)
+                            .background(Color.white.opacity(0.08))
+                            .cornerRadius(8)
+                            .padding(.trailing, 12)
+                            .padding(.top, 12)
+                    }
+                    Spacer()
+                }
+            )
         }
         .sheet(isPresented: $showImagePicker) {
             ImagePicker { image in
@@ -189,6 +204,11 @@ struct NewAIAssistantView: View {
             DocumentPicker { url in
                 attachFile(url)
             }
+        }
+        .onAppear {
+            // Quick debug feedback: show whether API key is present (without printing the key)
+            print("🔑 NewAIAssistantView: API Key present? \(!Config.googleAIKey.isEmpty)")
+            print("🌐 Model in config: \(Config.googleAIModel)")
         }
     }
     

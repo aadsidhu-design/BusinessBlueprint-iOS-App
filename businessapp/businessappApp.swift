@@ -24,6 +24,8 @@ struct businessappApp: App {
         
         let authViewModel = AuthViewModel()
         _authVM = StateObject(wrappedValue: authViewModel)
+        // Debug: print info about the app configuration and API key to help troubleshoot
+        Config.printDebugInfo()
     }
     
     var body: some Scene {

@@ -122,7 +122,7 @@ class GoogleAIService {
 
     private init() {
         if !apiKey.isEmpty {
-            print("🔒 GoogleAIService: API key loaded from app configuration.")
+            print("🔒 GoogleAIService: API key loaded from app configuration. Source: \(Config.googleAIKeySource())")
         } else {
             print("⚠️ GoogleAIService: No API key found. Add GOOGLE_AI_API_KEY to Info.plist or env settings.")
         }

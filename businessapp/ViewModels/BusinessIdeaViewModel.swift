@@ -98,9 +98,15 @@ class BusinessIdeaViewModel: ObservableObject {
                     print("✅ BusinessIdeaViewModel: Successfully generated \(ideas.count) ideas")
                     self.businessIdeas = ideas
                     self.selectedIdea = ideas.first
+                    Task { @MainActor in
+                        UserFeedbackManager.shared.ideaGenerated(count: ideas.count)
+                    }
                 case .failure(let error):
                     print("❌ BusinessIdeaViewModel: Failed to generate ideas - \(error.localizedDescription)")
                     self.errorMessage = error.localizedDescription
+                    Task { @MainActor in
+                        UserFeedbackManager.shared.showError(error.localizedDescription)
+                    }
                 }
             }
         }

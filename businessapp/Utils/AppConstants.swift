@@ -1,11 +1,13 @@
 //
 //  AppConstants.swift
-//  Business Blueprint
+//  VentureVoyage
 //
 //  Application-wide constants and configurations
+//  Centralized location for all app constants, keys, and configuration values
 //
 
 import Foundation
+import SwiftUI
 
 // MARK: - User Defaults Keys
 enum UserDefaultsKeys {
@@ -43,21 +45,52 @@ enum UIConstants {
     static let largePadding: CGFloat = 24
 }
 
-// MARK: - Legacy Onboarding Text (to be updated)
-struct Texts {
-    static let onboardingText: [String] = [
-        "Hi there! I'm Duo!",
-        "Just 7 quick questions before we start your first lesson!",
-        "DuoLingoLessons are backed by extensive research ...",
-        "... and they are also designed to be fun",
-        "Congrats on Completing your first lesson!",
-        "Now let's build you a habit of practicing every day."
-    ]
+// MARK: - App Branding
+enum AppBranding {
+    static let appName = "VentureVoyage"
+    static let tagline = "Navigate Your Entrepreneurial Journey"
+    static let welcomeMessage = "Welcome to VentureVoyage"
+    static let poweredBy = "Powered by AI"
 }
 
-// MARK: - Legacy Images (to be updated)
-struct Images {
-    static let gettingStartedImage = "duoWithName"
-    static let onboardintImage1 = "duoHappy.svg"
-    static let onboardintImage2 = "duoInterested"
+// MARK: - Onboarding Text
+enum OnboardingText {
+    static let welcome = "Welcome to VentureVoyage! 🚀"
+    static let subtitle = "Your AI-powered companion for entrepreneurial success"
+    static let quiz1 = "Let's discover your perfect business opportunity"
+    static let quiz2 = "Answer a few questions to personalize your journey"
+    static let quiz3 = "We'll use AI to generate ideas tailored to you"
+    static let completion = "Great! You're ready to start your voyage"
+    static let getStarted = "Get Started"
+    static let continueButton = "Continue"
+    static let skipButton = "Skip for now"
+}
+
+// MARK: - Feature Names
+enum FeatureNames {
+    static let aiAssistant = "AI Mentor"
+    static let ideaHub = "Idea Hub"
+    static let journeyMap = "Journey Map"
+    static let progressTracker = "Progress Tracker"
+    static let goalsPlanner = "Goals Planner"
+    static let timeline = "Voyage Timeline"
+}
+
+// MARK: - Error Messages
+enum ErrorMessages {
+    static let networkError = "Unable to connect. Please check your internet connection."
+    static let apiKeyMissing = "API key not configured. Please configure in Settings."
+    static let authenticationFailed = "Authentication failed. Please try again."
+    static let genericError = "Something went wrong. Please try again."
+    static let noIdeasFound = "No business ideas found. Try generating new ideas!"
+    static let saveFailed = "Failed to save. Please try again."
+}
+
+// MARK: - Success Messages
+enum SuccessMessages {
+    static let ideaGenerated = "Ideas generated successfully! 🎉"
+    static let goalCompleted = "Goal completed! Keep up the great work! 🎯"
+    static let milestonereached = "Milestone reached! You're making progress! 🏆"
+    static let profileSaved = "Profile saved successfully!"
+    static let accountCreated = "Welcome aboard! Your account is ready. ⚡"
 }

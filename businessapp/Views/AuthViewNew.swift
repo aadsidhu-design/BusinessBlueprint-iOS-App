@@ -2,11 +2,12 @@ import SwiftUI
 
 struct AuthViewNew: View {
     @ObservedObject var viewModel: AuthViewModel
+    @StateObject private var feedbackManager = UserFeedbackManager.shared
     @Environment(\.dismiss) var dismiss
     @State private var email = ""
     @State private var password = ""
     @State var isSignUp: Bool = true
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -31,11 +32,12 @@ struct AuthViewNew: View {
                                     .foregroundColor(mintGreen)
                             }
                             
-                            Text("Business Blueprint")
+                            Text(AppBranding.appName)
                                 .font(.system(size: 32, weight: .bold))
                                 .foregroundColor(.black)
-                            
-                            Text(isSignUp ? "Start your entrepreneurial journey" : "Welcome back to your journey")
+                                .accessibleHeading()
+
+                            Text(isSignUp ? AppBranding.tagline : "Welcome back to your voyage")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                                 .multilineTextAlignment(.center)
@@ -52,6 +54,12 @@ struct AuthViewNew: View {
                                     .textFieldStyle(.roundedBorder)
                                     .keyboardType(.emailAddress)
                                     .autocapitalization(.none)
+                                    .textContentType(.emailAddress)
+                                    .accessibleTextField(
+                                        label: "Email address",
+                                        hint: "Enter your email address",
+                                        identifier: AccessibilityHelper.Identifiers.emailField
+                                    )
                             }
                             
                             VStack(alignment: .leading, spacing: 8) {
@@ -61,6 +69,12 @@ struct AuthViewNew: View {
                                 
                                 SecureField("Enter your password", text: $password)
                                     .textFieldStyle(.roundedBorder)
+                                    .textContentType(isSignUp ? .newPassword : .password)
+                                    .accessibleTextField(
+                                        label: "Password",
+                                        hint: isSignUp ? "Create a password with at least 6 characters" : "Enter your password",
+                                        identifier: AccessibilityHelper.Identifiers.passwordField
+                                    )
                             }
                             
                             if let error = viewModel.errorMessage {
@@ -81,6 +95,7 @@ struct AuthViewNew: View {
                         // Action Buttons
                         VStack(spacing: 16) {
                             Button {
+                                feedbackManager.hapticImpactMedium()
                                 if isSignUp {
                                     viewModel.signUp(email: email, password: password)
                                 } else {
@@ -106,8 +121,14 @@ struct AuthViewNew: View {
                             }
                             .disabled(email.isEmpty || password.isEmpty || viewModel.isLoading)
                             .opacity(email.isEmpty || password.isEmpty ? 0.6 : 1.0)
-                            
+                            .accessibleButton(
+                                label: isSignUp ? "Create Account" : "Sign In",
+                                hint: isSignUp ? "Creates a new account with your email and password" : "Signs in to your existing account",
+                                identifier: isSignUp ? AccessibilityHelper.Identifiers.signUpButton : AccessibilityHelper.Identifiers.loginButton
+                            )
+
                             Button {
+                                feedbackManager.hapticSelection()
                                 isSignUp.toggle()
                             } label: {
                                 HStack {
@@ -128,9 +149,18 @@ struct AuthViewNew: View {
             }
             .navigationBarHidden(true)
         }
+        .withToast()
         .onChange(of: viewModel.isLoggedIn) { _, newValue in
             if newValue {
-                dismiss()
+                feedbackManager.showSuccess(SuccessMessages.accountCreated)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    dismiss()
+                }
+            }
+        }
+        .onChange(of: viewModel.errorMessage) { _, error in
+            if let error = error {
+                feedbackManager.showError(error)
             }
         }
     }

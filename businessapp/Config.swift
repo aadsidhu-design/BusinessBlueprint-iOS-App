@@ -92,7 +92,20 @@ struct Config {
     }
     
     /// App Settings
-    static let appName = "BusinessIdea"
-    static let appVersion = "1.0.0"
-    static let minimumIOSVersion = "14.0"
+    static let appName = "VentureVoyage"
+    static let appDisplayName = "VentureVoyage"
+    static let appTagline = "Navigate Your Entrepreneurial Journey"
+    static let appDescription = "AI-powered business idea generation and progress tracking"
+    static let appVersion = "2.0.0"
+    static let minimumIOSVersion = "16.0"
+
+    /// App Theme
+    static let primaryBrandColor = "voyageBlue"  // Modern blue for trust and innovation
+    static let accentBrandColor = "voyageOrange"  // Energetic orange for action
+    static let successColor = "voyageGreen"  // Success and growth
+
+    /// Feature Flags
+    static let enableHapticFeedback = true
+    static let enableAdvancedAnalytics = true
+    static let enableOfflineMode = true
 }

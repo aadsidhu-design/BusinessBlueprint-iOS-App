@@ -45,13 +45,14 @@ struct SelectionCardView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .stroke((selectedIndex < selectedEntry.count ? selectedEntry[selectedIndex] : false) ? Color.green : Color.gray.opacity(0.3), lineWidth: 2)
+                        .stroke((selectedIndex < selectedEntry.count ? selectedEntry[selectedIndex] : false) ? ModernDesign.Colors.successLight : ModernDesign.Colors.gray300, lineWidth: 2)
                         .frame(width: 24, height: 24)
-                    
+
                     if (selectedIndex < selectedEntry.count ? selectedEntry[selectedIndex] : false) {
                         Circle()
-                            .fill(Color.green)
+                            .fill(ModernDesign.Colors.successLight)
                             .frame(width: 12, height: 12)
+                            .shadow(color: ModernDesign.Colors.success.opacity(0.12), radius: 6, x: 0, y: 2)
                     }
                 }
                 
@@ -60,7 +61,7 @@ struct SelectionCardView: View {
                                 if selectedIndex < question.options.count {
                                     Text(question.options[selectedIndex])
                                         .font(.system(size: 16, weight: .semibold))
-                                        .foregroundStyle(.black)
+                                        .foregroundColor(ModernDesign.Colors.gray900)
                                 } else {
                                     Text("")
                                         .font(.system(size: 16, weight: .semibold))
@@ -88,11 +89,12 @@ struct SelectionCardView: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill((selectedIndex < selectedEntry.count ? selectedEntry[selectedIndex] : false) ? Color.green.opacity(0.1) : Color.gray.opacity(0.05))
+                    .fill(Color.white)
+                    .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 2)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke((selectedIndex < selectedEntry.count ? selectedEntry[selectedIndex] : false) ? Color.green.opacity(0.3) : Color.clear, lineWidth: 1)
+                    .stroke((selectedIndex < selectedEntry.count ? selectedEntry[selectedIndex] : false) ? ModernDesign.Colors.successLight.opacity(0.35) : Color.clear, lineWidth: 1)
             )
         }
         .padding(.horizontal, 16)

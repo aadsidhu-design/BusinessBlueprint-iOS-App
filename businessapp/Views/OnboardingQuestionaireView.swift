@@ -15,150 +15,180 @@ struct OnboardingQuestionaireView: View {
     
     @Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
     
+    let questionSubtitles: [String] = [
+        "Build digital products",
+        "Sell online products",
+        "Help people get healthier",
+        "Manage investments",
+        "Share your expertise",
+        "Different formats available",
+        "Risk management",
+        "Business motivation",
+        "Team structure",
+        "Current obstacles"
+    ]
+    
+    let optionIcons: [String] = [
+        "📊", "💼", "🏥", "💰", "📚", "🎨", "🔥", "💡", "👥", "⚠️"
+    ]
+    
     var body: some View {
         NavigationView {
-            VStack(alignment: .leading) {
-                HStack {
-                    Button(action: {  // Dismiss button
-                        self.presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Image(systemName: "arrow.backward")
+            ZStack {
+                // Background: dark gradient with a very subtle green wash so white cards and light-green accents feel cohesive
+                LinearGradient(colors: [ModernDesign.Colors.gray900, ModernDesign.Colors.gray800], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    .ignoresSafeArea()
+                    .overlay(
+                        Rectangle()
+                            .fill(ModernDesign.Colors.success.opacity(0.04))
+                            .blendMode(.overlay)
+                    )
+                
+                VStack(alignment: .leading, spacing: 0) {
+                    // Header with back button and progress bar
+                    HStack(spacing: 12) {
+                        Button(action: {
+                            self.presentationMode.wrappedValue.dismiss()
+                        }) {
+                            Image(systemName: "arrow.backward")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 24, height: 24)
+                                .foregroundStyle(ModernDesign.Colors.successLight)
+                        }
+                        
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(ModernDesign.Colors.gray700.opacity(0.25))
+                                .frame(height: 6)
+
+                            Capsule()
+                                .fill(ModernDesign.Colors.successLight)
+                                .frame(width: CGFloat(progress) * 240, height: 6)
+                                .animation(.easeInOut(duration: 0.6), value: progress)
+                        }
+                        .frame(width: 240, height: 6)
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    
+                    // Question bubble section
+                    HStack(alignment: .top, spacing: 12) {
+                        Image("duoReading")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 30)
-                            .foregroundStyle(.gray)
-                    }
-                    .padding()
-                    
-                    ZStack(alignment: .leading) {  // Progress bar
-                        Rectangle()
-                            .foregroundStyle(.gray.opacity(0.3))
-                            .frame(width: 300, height: 20)
-                        
-                        Rectangle()
-                            .foregroundStyle(.green)
-                            .frame(width: CGFloat(progress) * 300, height: 20)
-                            .clipShape(.rect(cornerRadius: 10))
-                            .animation(.easeInOut(duration: 0.6), value: progress)
-                    }
-                    .clipShape(.rect(cornerRadius: 10))
-                }
-                
-                HStack {
-                    Image("duoReading")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 100, height: 100)
-                    
-                    ZStack {
-                        SpeechBubble(cornerRadius: 20, isBottom: false, pointLocation: 20)
-                            .fill(.green)
-                        
-                        Text(viewModel.question.text)  // Question
-                            .font(.system(size: 20))
-                            .bold()
-                            .foregroundStyle(.white)
-                            .padding()
-                    }
-                    .frame(width: 200, height: 100)
-                    .padding()
-                }
-                .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity)))
-                .animation(.easeInOut(duration: 0.4), value: index)
-                
-                if index == 0 {
-                    Text("Choose your goal")
-                        .font(.system(size: 25))
-                        .bold()
-                        .foregroundStyle(.black)
-                        .padding()
-                }
-                
-                ScrollView {  // Answer cards
-                    LazyVStack {
-                        ForEach(0..<viewModel.question.options.count, id: \.self) { i in
-                            SelectionCardView(
-                                question: $viewModel.question,
-                                selectedEntry: $selectedEntry,
-                                queryIndex: index,
-                                selectedIndex: i,
-                                onSelect: { selectedValue in
-                                    // Persist selection into viewModel.answers
-                                    if let val = selectedValue {
-                                        viewModel.answers[viewModel.question.id] = val
-                                    } else {
-                                        viewModel.answers[viewModel.question.id] = ""
-                                    }
-                                }
+                            .frame(width: 70, height: 70)
+
+                        // Bubble that sizes to its text content — now light green
+                        Text(viewModel.question.text)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 14)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .multilineTextAlignment(.leading)
+                            .background(
+                                Capsule()
+                                    .fill(ModernDesign.Colors.successLight)
                             )
-                            .transition(.asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity), removal: .move(edge: .top).combined(with: .opacity)))
-                        }
+                            .layoutPriority(1)
+
+                        Spacer()
                     }
-                }
-                .animation(.easeInOut(duration: 0.4), value: index)
-                
-                Spacer()
-                
-                Button(action: {  // Continue Button
-                    withAnimation(.easeInOut(duration: 0.4)) {
-                        // ensure current question's answer is saved if there is a selection
-                        if let saved = viewModel.answers[viewModel.question.id], !saved.isEmpty {
-                            viewModel.saveAnswer(saved)
-                        } else if let sel = viewModel.question.selectedOption, !sel.isEmpty {
-                            viewModel.saveAnswer(sel)
-                        }
-
-                        if(index < StaticQuestions.questions.count - 1) {
-                        index = index + 1
-                        viewModel.getQuestionAtIndex(index: index)
-
-                        // Initialize selectedEntry array for new question
-                        selectedEntry = Array(repeating: false, count: StaticQuestions.questions[index].options.count)
-
-                        // If we already have an answer for this question, pre-select entries
-                        if let prev = viewModel.answers[StaticQuestions.questions[index].id], !prev.isEmpty {
-                            // For multiple answers stored as comma-separated, mark matching options
-                            let parts = prev.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
-                            for i in 0..<StaticQuestions.questions[index].options.count {
-                                let opt = StaticQuestions.questions[index].options[i].lowercased()
-                                if parts.contains(opt) || parts.contains("other") && opt.contains("other") {
-                                    selectedEntry[i] = true
-                                }
-                            }
-                            // put saved custom text into question.selectedOption if option was Other
-                            for i in 0..<StaticQuestions.questions[index].options.count {
-                                if StaticQuestions.questions[index].options[i].lowercased().contains("other") {
-                                    viewModel.question.selectedOption = prev
-                                }
-                            }
-                        }
-
-                        progress = CGFloat(index + 1) / CGFloat(StaticQuestions.questions.count)
-                        } else {
-                            // Complete onboarding
-                            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-                            self.presentationMode.wrappedValue.dismiss()
-                        }
-                    }
-                }) {
-                    Text(index < StaticQuestions.questions.count - 1 ? "Continue" : "Complete")
-                        .font(.system(size: 20))
-                        .bold()
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 20)
+                    .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity)))
+                    .animation(.easeInOut(duration: 0.4), value: index)
+                    
+                    // Title
+                    Text("Choose your goal")
+                        .font(.system(size: 24, weight: .bold))
                         .foregroundStyle(.white)
-                        .padding(EdgeInsets(top: 16, leading: 100, bottom: 16, trailing: 100))
-                        .background(isEnableContinueButton() ? .green : .gray)
-                        .clipShape(.rect(cornerRadius: 10))
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 12)
+                    
+                    // Answer cards
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(0..<viewModel.question.options.count, id: \.self) { i in
+                                OptionCardView(
+                                    question: $viewModel.question,
+                                    selectedEntry: $selectedEntry,
+                                    selectedIndex: i,
+                                    optionText: viewModel.question.options[i],
+                                    onSelect: { selectedValue in
+                                        if let val = selectedValue {
+                                            viewModel.answers[viewModel.question.id] = val
+                                        } else {
+                                            viewModel.answers[viewModel.question.id] = ""
+                                        }
+                                    }
+                                )
+                                .transition(.asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity), removal: .move(edge: .top).combined(with: .opacity)))
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                    }
+                    .animation(.easeInOut(duration: 0.4), value: index)
+                    
+                    // Continue button
+                    VStack(spacing: 16) {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.4)) {
+                                if let saved = viewModel.answers[viewModel.question.id], !saved.isEmpty {
+                                    viewModel.saveAnswer(saved)
+                                } else if let sel = viewModel.question.selectedOption, !sel.isEmpty {
+                                    viewModel.saveAnswer(sel)
+                                }
+
+                                if(index < StaticQuestions.questions.count - 1) {
+                                    index = index + 1
+                                    viewModel.getQuestionAtIndex(index: index)
+                                    selectedEntry = Array(repeating: false, count: StaticQuestions.questions[index].options.count)
+
+                                    if let prev = viewModel.answers[StaticQuestions.questions[index].id], !prev.isEmpty {
+                                        let parts = prev.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                                        for i in 0..<StaticQuestions.questions[index].options.count {
+                                            let opt = StaticQuestions.questions[index].options[i].lowercased()
+                                            if parts.contains(opt) || parts.contains("other") && opt.contains("other") {
+                                                selectedEntry[i] = true
+                                            }
+                                        }
+                                        for i in 0..<StaticQuestions.questions[index].options.count {
+                                            if StaticQuestions.questions[index].options[i].lowercased().contains("other") {
+                                                viewModel.question.selectedOption = prev
+                                            }
+                                        }
+                                    }
+
+                                    progress = CGFloat(index + 1) / CGFloat(StaticQuestions.questions.count)
+                                } else {
+                                    UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+                                    self.presentationMode.wrappedValue.dismiss()
+                                }
+                            }
+                        }) {
+                            Text(index < StaticQuestions.questions.count - 1 ? "Continue" : "Complete")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 48)
+                                .background(isEnableContinueButton() ? ModernDesign.Colors.success : Color.gray.opacity(0.3))
+                                .clipShape(Capsule())
+                        }
+                        .disabled(!isEnableContinueButton())
+                    }
+                    .padding(20)
                 }
-                .padding(.leading, 50)
-                .disabled(!isEnableContinueButton())
             }
         }
         .navigationBarBackButtonHidden(true)
         .onAppear {
-            // Initialize selectedEntry for first question
             selectedEntry = Array(repeating: false, count: viewModel.question.options.count)
 
-            // If we have a previously saved answer, pre-select
             if let saved = viewModel.savedAnswerForCurrentQuestion(), !saved.isEmpty {
                 let parts = saved.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
                 for i in 0..<viewModel.question.options.count {
@@ -180,7 +210,6 @@ struct OnboardingQuestionaireView: View {
                 return true
             }
         }
-        
         return false
     }
 }

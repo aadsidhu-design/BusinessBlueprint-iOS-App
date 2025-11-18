@@ -41,6 +41,7 @@ struct ModernDesign {
         // Accent Colors
         static let accent = Color(hex: "F59E0B") // Warm amber
         static let success = Color(hex: "10B981") // Modern green
+        static let successLight = Color(hex: "6EE7B7") // Lighter green for accents
         static let warning = Color(hex: "F59E0B") // Amber
         static let error = Color(hex: "EF4444") // Modern red
         

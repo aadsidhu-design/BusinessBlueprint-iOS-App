@@ -5,29 +5,57 @@ struct SelectionCardView: View {
     @Binding var selectedEntry: [Bool]
     let queryIndex: Int
     let selectedIndex: Int
+    // Called when this option becomes selected or its custom text changes
+    var onSelect: ((String?) -> Void)?
     
     var body: some View {
         Button(action: {
-            // Deselect all first, then select current
-            for i in 0..<selectedEntry.count {
-                selectedEntry[i] = false
+            // Ensure the selectedEntry array is large enough before mutating
+            if selectedEntry.count <= selectedIndex {
+                selectedEntry.append(contentsOf: Array(repeating: false, count: selectedIndex - selectedEntry.count + 1))
             }
-            selectedEntry[selectedIndex] = true
+            if question.allowsMultiple {
+                // toggle selection
+                selectedEntry[selectedIndex].toggle()
+                // for multiple selection, build comma-separated answer
+                var chosen: [String] = []
+                for i in 0..<selectedEntry.count where selectedEntry[i] {
+                    if i < question.options.count {
+                        chosen.append(question.options[i])
+                    }
+                }
+                let answer = chosen.joined(separator: ", ")
+                onSelect?(answer)
+            } else {
+                // single selection: deselect others and select current
+                for i in 0..<selectedEntry.count {
+                    selectedEntry[i] = false
+                }
+                selectedEntry[selectedIndex] = true
+                let answer = selectedIndex < question.options.count ? question.options[selectedIndex] : nil
+                // if option is an Other-type, we may want to keep using question.selectedOption (filled via TextField)
+                if let a = answer, a.lowercased().contains("other") || a.lowercased().contains("something else") || a.lowercased().contains("tell us") {
+                    // if there's existing custom text, use that; otherwise use the option label as placeholder
+                    onSelect?(question.selectedOption ?? "")
+                } else {
+                    onSelect?(answer)
+                }
+            }
         }) {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .stroke(selectedEntry[selectedIndex] ? Color.green : Color.gray.opacity(0.3), lineWidth: 2)
+                        .stroke((selectedIndex < selectedEntry.count ? selectedEntry[selectedIndex] : false) ? Color.green : Color.gray.opacity(0.3), lineWidth: 2)
                         .frame(width: 24, height: 24)
                     
-                    if selectedEntry[selectedIndex] {
+                    if (selectedIndex < selectedEntry.count ? selectedEntry[selectedIndex] : false) {
                         Circle()
                             .fill(Color.green)
                             .frame(width: 12, height: 12)
                     }
                 }
                 
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: 8) {
                                 // Question.options holds the option strings
                                 if selectedIndex < question.options.count {
                                     Text(question.options[selectedIndex])
@@ -36,6 +64,20 @@ struct SelectionCardView: View {
                                 } else {
                                     Text("")
                                         .font(.system(size: 16, weight: .semibold))
+                                }
+
+                                // If this option is an "Other"-type and currently selected, show a text field for custom input
+                                let option = selectedIndex < question.options.count ? question.options[selectedIndex].lowercased() : ""
+                                if (selectedIndex < selectedEntry.count ? selectedEntry[selectedIndex] : false) && (option.contains("other") || option.contains("something else") || option.contains("tell us") ) {
+                                    TextField("Please describe...", text: Binding(
+                                        get: { question.selectedOption ?? "" },
+                                        set: { newVal in
+                                            question.selectedOption = newVal
+                                            onSelect?(newVal)
+                                        }
+                                    ))
+                                    .textFieldStyle(.roundedBorder)
+                                    .font(.system(size: 14))
                                 }
                             }
                 
@@ -46,14 +88,21 @@ struct SelectionCardView: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(selectedEntry[selectedIndex] ? Color.green.opacity(0.1) : Color.gray.opacity(0.05))
+                    .fill((selectedIndex < selectedEntry.count ? selectedEntry[selectedIndex] : false) ? Color.green.opacity(0.1) : Color.gray.opacity(0.05))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(selectedEntry[selectedIndex] ? Color.green.opacity(0.3) : Color.clear, lineWidth: 1)
+                    .stroke((selectedIndex < selectedEntry.count ? selectedEntry[selectedIndex] : false) ? Color.green.opacity(0.3) : Color.clear, lineWidth: 1)
             )
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+        .scaleEffect(selectedEntry.count > selectedIndex && selectedEntry[selectedIndex] ? 1.02 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: selectedEntry.count > selectedIndex ? selectedEntry[selectedIndex] : false)
+        .onAppear {
+            if selectedEntry.count < question.options.count {
+                selectedEntry.append(contentsOf: Array(repeating: false, count: question.options.count - selectedEntry.count))
+            }
+        }
     }
 }

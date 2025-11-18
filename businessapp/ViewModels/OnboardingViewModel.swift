@@ -11,6 +11,7 @@ import Combine
 class OnboardingViewModel: ObservableObject {
     @Published var question: Question
     var index: Int
+    @Published var answers: [String: String] = [:] // store answers by question id
 
     init(){
         // use the first static question as a sensible default if available
@@ -23,5 +24,13 @@ class OnboardingViewModel: ObservableObject {
         if index < StaticQuestions.questions.count {
             question = StaticQuestions.questions[index]
         }
+    }
+
+    func saveAnswer(_ answer: String) {
+        answers[question.id] = answer
+    }
+
+    func savedAnswerForCurrentQuestion() -> String? {
+        return answers[question.id]
     }
 }
